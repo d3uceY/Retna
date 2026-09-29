@@ -1,0 +1,8 @@
+# Go sources stay LF so gofmt is clean on every platform.
+*.go text eol=lf
+*.mod text eol=lf
+*.sum text eol=lf
+
+# Docs and config follow the platform default.
+*.md text
+.gitignore text

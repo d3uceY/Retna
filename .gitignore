@@ -1,0 +1,11 @@
+# Build output
+/retna
+/retna.exe
+*.exe
+
+# Test binaries
+*.test
+*.out
+
+# Scratch files
+/palette.txt
