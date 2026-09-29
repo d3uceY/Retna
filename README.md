@@ -1,4 +1,4 @@
-# Retna
+<img src="assets/retna.png" alt="Retna" width="260">
 
 Convert colors and measure how readable they are.
 
