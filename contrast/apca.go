@@ -6,7 +6,10 @@ import (
 	"github.com/d3uceY/Retna/color"
 )
 
-// Constants from the APCA 0.1.9 reference implementation.
+// Constants from the APCA 0.1.9 reference implementation (apca-w3).
+//
+// APCA is a draft for WCAG 3, not a standard. WCAG 2.2 remains the
+// Recommendation, which is why the WCAG algorithm is the default elsewhere.
 const (
 	apcaSR = 0.2126729
 	apcaSG = 0.7151522
@@ -34,17 +37,24 @@ type APCA struct{}
 // Name returns "apca".
 func (APCA) Name() string { return "apca" }
 
-// Calculate returns the Lc value and the usual APCA guidance bands.
+// Calculate returns the Lc value and APCA's published use case bands.
 func (APCA) Calculate(foreground, background color.Color) Result {
 	lc := apcaLc(foreground, background)
 	abs := math.Abs(lc)
 	return Result{
 		Algorithm: "apca",
 		Value:     lc,
+		// The names follow the use case table in the reference: 90 is the
+		// preferred level for body text, 75 its minimum, 60 is content text
+		// that is not body text, 45 is large or heavy text, 30 is the floor for
+		// any text at all, and 15 is the floor for non-text elements.
 		Checks: []Check{
-			{Name: "Lc 45 Fluent Text", Min: 45, Pass: abs >= 45},
-			{Name: "Lc 60 Body Text", Min: 60, Pass: abs >= 60},
-			{Name: "Lc 75 Body Preferred", Min: 75, Pass: abs >= 75},
+			{Name: "Lc 90 Body Preferred", Min: 90, Pass: abs >= 90},
+			{Name: "Lc 75 Body Minimum", Min: 75, Pass: abs >= 75},
+			{Name: "Lc 60 Content Text", Min: 60, Pass: abs >= 60},
+			{Name: "Lc 45 Large Text", Min: 45, Pass: abs >= 45},
+			{Name: "Lc 30 Text Floor", Min: 30, Pass: abs >= 30},
+			{Name: "Lc 15 Non-text", Min: 15, Pass: abs >= 15},
 		},
 	}
 }
