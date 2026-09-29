@@ -89,6 +89,16 @@ func runContrast(w io.Writer, opts contrastOptions) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	if opts.minSet {
+		if !positiveFinite(opts.min) {
+			return 0, fmt.Errorf("--min must be a ratio above 0, got %v", opts.min)
+		}
+		// --min is a ratio, and only WCAG produces one. Without this guard the
+		// check finds nothing to compare and reports a pass at 0.00:1.
+		if !hasAlgorithm(algorithms, "wcag") {
+			return 0, errors.New("--min compares the WCAG ratio, so it needs the wcag algorithm")
+		}
+	}
 	rows := make([]contrastRow, 0, len(targets))
 	composited := false
 	for _, target := range targets {
