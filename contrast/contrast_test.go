@@ -133,6 +133,53 @@ func TestAPCAChecksUseMagnitude(t *testing.T) {
 	}
 }
 
+// TestAPCAPublishedTestVectors uses the vectors shipped with the apca-w3
+// reference implementation. The first color is the text and the second is the
+// background.
+func TestAPCAPublishedTestVectors(t *testing.T) {
+	cases := []struct {
+		fg, bg string
+		want   float64
+	}{
+		{"#888888", "#FFFFFF", 63.056},
+		{"#FFFFFF", "#888888", -68.541},
+		{"#112233", "#DDEEFF", 91.668},
+	}
+	for _, tc := range cases {
+		got := APCA{}.Calculate(mustParse(t, tc.fg), mustParse(t, tc.bg))
+		if math.Abs(got.Value-tc.want) > 0.01 {
+			t.Errorf("APCA %s on %s = %.4f, want about %.3f", tc.fg, tc.bg, got.Value, tc.want)
+		}
+	}
+}
+
+// TestAPCABands checks the use case levels against the published Lc for
+// #888888 on white. At 63.056 it clears the 60 band and everything below it,
+// and misses the 75 and 90 bands.
+func TestAPCABands(t *testing.T) {
+	want := map[string]bool{
+		"Lc 90 Body Preferred": false,
+		"Lc 75 Body Minimum":   false,
+		"Lc 60 Content Text":   true,
+		"Lc 45 Large Text":     true,
+		"Lc 30 Text Floor":     true,
+		"Lc 15 Non-text":       true,
+	}
+	result := APCA{}.Calculate(mustParse(t, "#888888"), mustParse(t, "#FFFFFF"))
+	if len(result.Checks) != len(want) {
+		t.Fatalf("got %d checks, want %d", len(result.Checks), len(want))
+	}
+	for _, check := range result.Checks {
+		expected, ok := want[check.Name]
+		if !ok {
+			t.Fatalf("unexpected check %q", check.Name)
+		}
+		if check.Pass != expected {
+			t.Errorf("check %q = %v, want %v", check.Name, check.Pass, expected)
+		}
+	}
+}
+
 func TestRegistry(t *testing.T) {
 	names := Names()
 	if len(names) != 2 || names[0] != "apca" || names[1] != "wcag" {
