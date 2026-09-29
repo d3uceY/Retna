@@ -42,4 +42,9 @@ jobs:
           version: "~> v2"
           args: release --clean
         env:
+          # Creates the release and uploads the archives. Scoped to this repo.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Required only to push the Homebrew cask to d3uceY/homebrew-retna,
+          # which is a second repository. A PAT with write access to the tap.
+          # See CONTRIBUTING.md, "Releasing".
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}

@@ -60,7 +60,36 @@ To exercise the pipeline without tagging:
 goreleaser release --snapshot --clean
 ```
 
-Artifacts land in `dist/`, which is ignored by git.
+Artifacts land in `dist/`, which is ignored by git. A snapshot also writes the
+cask it would have published to `dist/homebrew/Casks/retna.rb`, which is the
+quickest way to see what the tap would receive.
+
+### The Homebrew tap
+
+The release publishes a cask to `d3uceY/homebrew-retna`, which is a separate
+repository. Two things have to exist before the first tagged release that
+includes it:
+
+1. The tap repository itself, public, named `homebrew-retna`.
+2. A secret named `PUBLISHER_TOKEN` on this repository, holding a token that can
+   write to the tap. A fine-grained token needs `Contents: read and write` on
+   that one repository. A classic token needs the `repo` scope.
+
+The workflow passes it to GoReleaser as `HOMEBREW_TAP_GITHUB_TOKEN`. The
+built-in `GITHUB_TOKEN` is scoped to the repository the workflow runs in, so it
+cannot push to the tap, and a release without the secret fails at the tap step.
+
+Tap commits are authored by GoReleaser's default bot. To use your own name and
+email, add a `commit_author` block under `homebrew_casks` in
+`.goreleaser.yaml`.
+
+The cask installs an unsigned binary, so macOS Gatekeeper may block the first
+run. If that happens, either reinstall with `brew install --cask
+--no-quarantine d3uceY/retna/retna`, or clear the attribute with
+`xattr -d com.apple.quarantine $(which retna)`.
+
+Homebrew casks are a macOS feature. GoReleaser emits Linux stanzas as well, but
+treat them as unused: Linux users should use the tarball.
 
 ## Project layout
 

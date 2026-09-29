@@ -16,6 +16,12 @@ Prebuilt binaries for Linux, macOS and Windows are on the
 [releases page](https://github.com/d3uceY/Retna/releases). Unpack the archive
 and put `retna` somewhere on your PATH.
 
+On macOS, with Homebrew:
+
+```
+brew install --cask d3uceY/retna/retna
+```
+
 With Go 1.25 or newer:
 
 ```

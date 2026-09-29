@@ -59,6 +59,23 @@ changelog:
       - "^test:"
       - "^chore:"
 
+# Publishes the cask to the d3uceY/homebrew-retna tap, which is a SECOND
+# repository. The built-in GITHUB_TOKEN only reaches the repo the workflow runs
+# in, so the tap push needs its own token. See HOMEBREW_TAP_GITHUB_TOKEN in
+# .github/workflows/release.yml.
+homebrew_casks:
+  - name: retna
+    homepage: "https://github.com/d3uceY/Retna"
+    description: "Convert colors between color spaces and measure their contrast"
+    directory: Casks
+    repository:
+      owner: d3uceY
+      name: homebrew-retna
+      branch: main
+      # A personal access token with write access to the tap. Without this,
+      # goreleaser falls back to GITHUB_TOKEN and the push is rejected.
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+
 release:
   footer: >-
 
