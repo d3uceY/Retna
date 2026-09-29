@@ -37,7 +37,8 @@ type ContrastListJSON struct {
 
 // ColorJSON is the structured breakdown of a single color. Angles are degrees,
 // saturation style channels are 0..1, and Lab lightness is 0..100 while OKLab
-// lightness is 0..1.
+// lightness is 0..1. The wide gamut components are raw, so they can sit
+// outside 0..1 for colors the narrower gamut cannot hold.
 type ColorJSON struct {
 	Input     string     `json:"input"`
 	Hex       string     `json:"hex"`
@@ -50,6 +51,11 @@ type ColorJSON struct {
 	LCH       [3]float64 `json:"lch"`
 	OKLab     [3]float64 `json:"oklab"`
 	OKLCH     [3]float64 `json:"oklch"`
+	SRGB      [3]float64 `json:"srgb"`
+	DisplayP3 [3]float64 `json:"display-p3"`
+	A98RGB    [3]float64 `json:"a98-rgb"`
+	ProPhoto  [3]float64 `json:"prophoto-rgb"`
+	Rec2020   [3]float64 `json:"rec2020"`
 	Luminance float64    `json:"luminance"`
 }
 
@@ -121,8 +127,24 @@ func NewColorJSON(input string, c color.Color) ColorJSON {
 		LCH:       [3]float64{round4(lchL), round4(lchC), round4(lchH)},
 		OKLab:     [3]float64{round4(okL), round4(okA), round4(okB)},
 		OKLCH:     [3]float64{round4(oklchL), round4(oklchC), round4(oklchH)},
+		SRGB:      wideGamutTriple(c, "srgb"),
+		DisplayP3: wideGamutTriple(c, "display-p3"),
+		A98RGB:    wideGamutTriple(c, "a98-rgb"),
+		ProPhoto:  wideGamutTriple(c, "prophoto-rgb"),
+		Rec2020:   wideGamutTriple(c, "rec2020"),
 		Luminance: round4(c.Luminance()),
 	}
+}
+
+// wideGamutTriple reads one wide gamut space for the JSON view. The names are
+// literals that the color package defines, so an error cannot happen in
+// practice and a zero triple is the safe fallback.
+func wideGamutTriple(c color.Color, name string) [3]float64 {
+	v, err := color.WideGamut(c, name)
+	if err != nil {
+		return [3]float64{}
+	}
+	return [3]float64{round4(v[0]), round4(v[1]), round4(v[2])}
 }
 
 func round4(v float64) float64 { return math.Round(v*1e4) / 1e4 }
