@@ -38,6 +38,7 @@ color/
   color.go         Color type, luminance, sRGB companding
   parse.go         parsing every input notation
   convert.go       conversions between spaces and the display formatter
+  gamut.go         the CSS color() spaces: matrices and transfer functions
   named.go         the CSS named colors
 contrast/
   contrast.go      the Algorithm interface and the registry
@@ -52,8 +53,16 @@ output/
 
 Color is the only representation the rest of the program sees. Every input
 notation is parsed down to gamma encoded sRGB, and every space is a pair of
-functions that go to and from it. Adding a space means adding those two
-functions and listing the name in `color.Spaces`.
+functions that go to and from it. Adding a space such as HSL or OKLab means
+writing those two functions and listing the name in `color.Spaces`.
+
+The CSS `color()` spaces work differently. Each one is a row in the `gamuts`
+table in `color/gamut.go`: two matrices, a flag for the D50 white point, and a
+decode and encode pair. One generic path then serves all of them, so a new
+space is a table entry plus a name in `wideGamutNames`. Output into those spaces
+is deliberately left unclipped, because CSS allows components outside 0..1 and
+clipping one would name a different color. The sRGB transfer functions in
+`color.go` preserve the sign for the same reason.
 
 Contrast algorithms live behind `contrast.Algorithm`, which takes two colors
 and returns a value plus a set of named checks. Nothing in `color` knows about
