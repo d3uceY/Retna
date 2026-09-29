@@ -101,6 +101,11 @@ Required: 4.50:1
 With `--against`, the summary line reports how many pairs failed. The exit code
 is 1 when at least one did.
 
+`--min` compares the WCAG ratio, so it needs the wcag algorithm to be selected.
+Combining it with `--algorithm apca` is an error rather than a check that quietly
+finds nothing to measure. `--all` includes wcag, so it works there. The value
+has to be a real number above zero, since `--min 0` would pass anything.
+
 ## convert
 
 `--to` takes one space, a comma separated list, or `all`.
@@ -162,7 +167,9 @@ retna palette contrast --foreground white --colors "#000,#111,#666"
 ```
 
 The file holds one color per line, and each line may also be a comma separated
-list. Blank lines and lines starting with `//` are skipped.
+list. Blank lines and lines starting with `//` are skipped, and a UTF-8 byte
+order mark at the start of the file is ignored, so a file saved by a Windows
+editor works as-is.
 
 ```
 Contrast
@@ -226,6 +233,13 @@ Color       Ratio   WCAG  Note
 Use `--target 7` for an explicit ratio, or `--suggest` to control how many
 alternatives are listed. A color that already passes is reported and left
 alone.
+
+The target has to sit between 1:1 and 21:1. Black on white is the highest ratio
+there is, so anything above 21 cannot be reached and is rejected instead of
+reported as unfixable. `--suggest` needs at least 1.
+
+The suggested colors are measured after rounding to 8-bit channels, so the hex
+shown is the color that actually meets the ratio on that line.
 
 ## Input formats
 
