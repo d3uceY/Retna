@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -81,4 +82,11 @@ func joinNames(names []string) string {
 		out += n
 	}
 	return out
+}
+
+// positiveFinite reports whether v is a real number above zero, which is what
+// the ratio flags need before anything is compared against them. The > 0 test
+// is false for NaN, and the infinity check catches what it would let through.
+func positiveFinite(v float64) bool {
+	return v > 0 && !math.IsInf(v, 0)
 }
