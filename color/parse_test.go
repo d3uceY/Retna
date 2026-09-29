@@ -136,6 +136,99 @@ func TestParseUnknownFunctionIsErrUnknownFormat(t *testing.T) {
 	}
 }
 
+// TestPercentageReferenceRanges pins the CSS percent reference ranges for the
+// axes that are not 1: 100% is 125 in Lab, 150 chroma in LCH, 0.4 in Oklab and
+// 0.4 chroma in OkLCh. A percentage and the equivalent number must therefore
+// parse to the identical color.
+func TestPercentageReferenceRanges(t *testing.T) {
+	cases := [][2]string{
+		{"lab(50 100% 0)", "lab(50 125 0)"},
+		{"lab(50 -100% 0)", "lab(50 -125 0)"},
+		{"lab(50 0 50%)", "lab(50 0 62.5)"},
+		{"lab(100% 0 0)", "lab(100 0 0)"},
+		{"lch(50 100% 40)", "lch(50 150 40)"},
+		{"lch(50% 50% 40)", "lch(50 75 40)"},
+		{"oklab(0.5 100% 0)", "oklab(0.5 0.4 0)"},
+		{"oklab(0.5 0 -100%)", "oklab(0.5 0 -0.4)"},
+		{"oklch(50% 100% 40)", "oklch(0.5 0.4 40)"},
+	}
+	for _, tc := range cases {
+		percent, err := Parse(tc[0])
+		if err != nil {
+			t.Errorf("Parse(%q) returned error: %v", tc[0], err)
+			continue
+		}
+		plain, err := Parse(tc[1])
+		if err != nil {
+			t.Errorf("Parse(%q) returned error: %v", tc[1], err)
+			continue
+		}
+		if percent != plain {
+			t.Errorf("%s and %s should be the same color, got %v and %v", tc[0], tc[1], percent, plain)
+		}
+	}
+}
+
+// TestParseTimeClamping covers the clamping CSS specifies at parsed-value time:
+// Lab lightness to 0..100, negative chroma to 0, and negative HSL saturation to
+// 0. Everything else stays unbounded so an out of gamut color can still be
+// named and round tripped.
+func TestParseTimeClamping(t *testing.T) {
+	clamped := [][2]string{
+		{"lab(150 0 0)", "lab(100 0 0)"},
+		{"lab(-20 0 0)", "lab(0 0 0)"},
+		{"lch(150 30 40)", "lch(100 30 40)"},
+		{"lch(50 -30 40)", "lch(50 0 40)"},
+		{"oklab(1.5 0 0)", "oklab(1 0 0)"},
+		{"oklab(-0.5 0 0)", "oklab(0 0 0)"},
+		{"oklch(0.5 -0.2 40)", "oklch(0.5 0 40)"},
+		{"hsl(0 -50% 50%)", "hsl(0 0% 50%)"},
+		// Lightness clamps before it can overflow, so this is white, not an error.
+		{"lab(1e300 0 0)", "lab(100 0 0)"},
+	}
+	for _, tc := range clamped {
+		got, err := Parse(tc[0])
+		if err != nil {
+			t.Errorf("Parse(%q) returned error: %v", tc[0], err)
+			continue
+		}
+		want, err := Parse(tc[1])
+		if err != nil {
+			t.Errorf("Parse(%q) returned error: %v", tc[1], err)
+			continue
+		}
+		if got != want {
+			t.Errorf("%s should clamp to %s, got %v and %v", tc[0], tc[1], got, want)
+		}
+	}
+
+	// The far ends of every axis stay unbounded, so an out of gamut color keeps
+	// its real components instead of being squeezed onto the gamut boundary.
+	// Comparing against the constructors keeps clipping out of the picture.
+	unclamped := []struct {
+		in   string
+		want Color
+	}{
+		{"lab(50 200 0)", Lab(50, 200, 0, 1)},
+		{"lch(50 300 40)", LCH(50, 300, 40, 1)},
+		{"oklab(0.5 0.9 0)", OKLab(0.5, 0.9, 0, 1)},
+		{"oklch(0.5 0.8 40)", OKLCH(0.5, 0.8, 40, 1)},
+		{"hsl(0 150% 50%)", HSL(0, 1.5, 0.5, 1)},
+		{"hsl(0 100% -20%)", HSL(0, 1, -0.2, 1)},
+		{"hsl(0 100% 120%)", HSL(0, 1, 1.2, 1)},
+	}
+	for _, tc := range unclamped {
+		got, err := Parse(tc.in)
+		if err != nil {
+			t.Errorf("Parse(%q) returned error: %v", tc.in, err)
+			continue
+		}
+		if got != tc.want {
+			t.Errorf("Parse(%q) = %v, want the unclamped %v", tc.in, got, tc.want)
+		}
+	}
+}
+
 func TestParseShortHexShorthand(t *testing.T) {
 	got, err := Parse("#abc")
 	if err != nil {
