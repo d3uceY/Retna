@@ -54,6 +54,13 @@ func runReadable(w io.Writer, background string, opts readableOptions) error {
 		return err
 	}
 
+	// Composite the background over white up front, the same way the
+	// measurement does, so the color shown is the one the ratios belong to.
+	composited := bg.A < 1
+	if composited {
+		bg = bg.Over(color.RGB(1, 1, 1))
+	}
+
 	candidates := opts.candidates
 	if len(candidates) == 0 {
 		candidates = []string{"#000000", "#FFFFFF"}
@@ -69,6 +76,9 @@ func runReadable(w io.Writer, background string, opts readableOptions) error {
 		fg, err := color.Parse(candidate)
 		if err != nil {
 			return fmt.Errorf("candidate %q: %w", candidate, err)
+		}
+		if fg.A < 1 {
+			composited = true
 		}
 		flatFG, flatBG := flatten(fg, bg)
 		scores = append(scores, scored{
@@ -107,6 +117,7 @@ func runReadable(w io.Writer, background string, opts readableOptions) error {
 			{"Level", strings.ToUpper(opts.level)},
 			{"Verdict", output.Verdict(best.ratio >= minimum)},
 		}))
+		noteCompositing(w, composited)
 		return nil
 	}
 
@@ -120,6 +131,7 @@ func runReadable(w io.Writer, background string, opts readableOptions) error {
 		})
 	}
 	fmt.Fprint(w, output.Table([]string{"Text color", "Ratio", strings.ToUpper(opts.level)}, rows))
+	noteCompositing(w, composited)
 	return nil
 }
 
