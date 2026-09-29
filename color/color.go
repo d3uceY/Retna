@@ -65,6 +65,11 @@ func clamp01(v float64) float64 {
 	}
 }
 
+// clamp keeps v inside lo..hi.
+func clamp(v, lo, hi float64) float64 {
+	return math.Min(math.Max(v, lo), hi)
+}
+
 // Clamp limits every channel to the displayable sRGB range.
 func (c Color) Clamp() Color {
 	return Color{clamp01(c.R), clamp01(c.G), clamp01(c.B), clamp01(c.A)}
