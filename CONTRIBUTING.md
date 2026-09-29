@@ -34,6 +34,34 @@ Tests sit next to the code they cover, so a package carries its tests with it
 when it moves. The CLI tests live in `cmd/` beside the commands they exercise,
 and there are no test files at the module root.
 
+## Releasing
+
+The released version is the git tag. Nothing else is bumped by hand.
+
+```
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+Pushing a `v`-prefixed tag starts `.github/workflows/release.yml`, which vets
+and tests the tree and then runs GoReleaser. GoReleaser builds amd64 and arm64
+binaries for Linux, macOS and Windows, packs each one with the license and
+readme, writes a checksum file and opens the GitHub release. The changelog comes
+from the commits since the previous tag, with `docs:`, `test:` and `chore:`
+commits filtered out.
+
+The version the binary reports is injected at build time, so `retna version`
+always matches the tag. The placeholder in `cmd/root.go` is only what an
+untagged local build shows.
+
+To exercise the pipeline without tagging:
+
+```
+goreleaser release --snapshot --clean
+```
+
+Artifacts land in `dist/`, which is ignored by git.
+
 ## Project layout
 
 ```
