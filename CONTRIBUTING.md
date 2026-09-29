@@ -121,6 +121,8 @@ a new algorithm shows up without touching the command layer.
 
 ## Submitting changes
 
+Participation is covered by the [Code of Conduct](CODE_OF_CONDUCT.md).
+
 1. Fork the repository and branch from `main`.
 2. Keep the change focused on one thing.
 3. Run the build, the vet pass and the tests above.
