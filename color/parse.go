@@ -165,7 +165,11 @@ func parseHSL(args []string) (Color, error) {
 	if err != nil {
 		return Color{}, err
 	}
-	return HSL(h, clamp01(s), clamp01(l), a), nil
+	// CSS only clamps negative saturation (a historical carry over from
+	// CSS Color 3); saturation above 100% and the whole lightness axis are
+	// deliberately unbounded so values can round trip. There is an open CSSWG
+	// issue about the inconsistency, so this may change again.
+	return HSL(h, math.Max(s, 0), l, a), nil
 }
 
 func parseHSV(args []string) (Color, error) {
@@ -222,11 +226,11 @@ func parseLab(args []string) (Color, error) {
 	if err != nil {
 		return Color{}, fmt.Errorf("lab lightness: %w", err)
 	}
-	a, err := number(args[1], 1)
+	a, err := number(args[1], 125)
 	if err != nil {
 		return Color{}, fmt.Errorf("lab a: %w", err)
 	}
-	b, err := number(args[2], 1)
+	b, err := number(args[2], 125)
 	if err != nil {
 		return Color{}, fmt.Errorf("lab b: %w", err)
 	}
@@ -234,7 +238,9 @@ func parseLab(args []string) (Color, error) {
 	if err != nil {
 		return Color{}, err
 	}
-	return Lab(l, a, b, alpha), nil
+	// CSS clamps Lab lightness at parsed-value time; a and b stay unbounded so
+	// an out of gamut color can still be named.
+	return Lab(clamp(l, 0, 100), a, b, alpha), nil
 }
 
 func parseLCH(args []string) (Color, error) {
@@ -245,7 +251,7 @@ func parseLCH(args []string) (Color, error) {
 	if err != nil {
 		return Color{}, fmt.Errorf("lch lightness: %w", err)
 	}
-	chroma, err := number(args[1], 1.5)
+	chroma, err := number(args[1], 150)
 	if err != nil {
 		return Color{}, fmt.Errorf("lch chroma: %w", err)
 	}
@@ -257,7 +263,9 @@ func parseLCH(args []string) (Color, error) {
 	if err != nil {
 		return Color{}, err
 	}
-	return LCH(l, chroma, h, alpha), nil
+	// Chroma clamps at zero but stays unbounded above, so a wider gamut color
+	// survives the round trip.
+	return LCH(clamp(l, 0, 100), math.Max(chroma, 0), h, alpha), nil
 }
 
 func parseOKLab(args []string) (Color, error) {
@@ -268,11 +276,11 @@ func parseOKLab(args []string) (Color, error) {
 	if err != nil {
 		return Color{}, fmt.Errorf("oklab lightness: %w", err)
 	}
-	a, err := number(args[1], 1)
+	a, err := number(args[1], 0.4)
 	if err != nil {
 		return Color{}, fmt.Errorf("oklab a: %w", err)
 	}
-	b, err := number(args[2], 1)
+	b, err := number(args[2], 0.4)
 	if err != nil {
 		return Color{}, fmt.Errorf("oklab b: %w", err)
 	}
@@ -303,7 +311,7 @@ func parseOKLCH(args []string) (Color, error) {
 	if err != nil {
 		return Color{}, err
 	}
-	return OKLCH(clamp01(l), chroma, h, alpha), nil
+	return OKLCH(clamp(l, 0, 1), math.Max(chroma, 0), h, alpha), nil
 }
 
 func parseHex(s string) (Color, error) {
