@@ -7,8 +7,13 @@ import (
 	"strings"
 )
 
-// Spaces lists every space Format understands, in display order.
-var Spaces = []string{"hex", "rgb", "rgba", "hsl", "hsv", "hwb", "lab", "lch", "oklab", "oklch"}
+// Spaces lists every space Format understands, in display order. The last
+// group are the CSS color() spaces.
+var Spaces = []string{
+	"hex", "rgb", "rgba", "hsl", "hsv", "hwb",
+	"lab", "lch", "oklab", "oklch",
+	"srgb", "display-p3", "a98-rgb", "prophoto-rgb", "rec2020",
+}
 
 // HSL builds a color from hue in degrees and saturation/lightness in 0..1.
 func HSL(h, s, l, a float64) Color {
@@ -230,9 +235,14 @@ func ToOKLCH(c Color) (l, chroma, h float64) {
 }
 
 // XYZ conversions use the D65 white point, which is what sRGB is defined
-// against. Lab needs D50, so the two Bradford matrices below bridge them.
+// against. Lab and ProPhoto need D50, so the two Bradford matrices below
+// bridge them.
 func srgbToXYZ(c Color) (x, y, z float64) {
 	r, g, b := c.Linear()
+	return srgbToXYZLinear(r, g, b)
+}
+
+func srgbToXYZLinear(r, g, b float64) (x, y, z float64) {
 	x = 0.4123907992659595*r + 0.3575843393838780*g + 0.1804807884018343*b
 	y = 0.2126390058715104*r + 0.7151686787677560*g + 0.0721923153607337*b
 	z = 0.0193308187155918*r + 0.1191947797946260*g + 0.9505321522496607*b
@@ -240,10 +250,15 @@ func srgbToXYZ(c Color) (x, y, z float64) {
 }
 
 func xyzToSrgb(x, y, z, a float64) Color {
-	r := 3.2409699419045226*x - 1.5373831775700940*y - 0.4986107602930034*z
-	g := -0.9692436362808796*x + 1.8759675015077204*y + 0.0415550574071756*z
-	b := 0.0556300796969936*x - 0.2039769588889765*y + 1.0569715142428786*z
+	r, g, b := xyzToSrgbLinear(x, y, z)
 	return fromLinear(r, g, b, a)
+}
+
+func xyzToSrgbLinear(x, y, z float64) (r, g, b float64) {
+	r = 3.2409699419045226*x - 1.5373831775700940*y - 0.4986107602930034*z
+	g = -0.9692436362808796*x + 1.8759675015077204*y + 0.0415550574071756*z
+	b = 0.0556300796969936*x - 0.2039769588889765*y + 1.0569715142428786*z
+	return r, g, b
 }
 
 func d65ToD50(x, y, z float64) (float64, float64, float64) {
@@ -292,7 +307,8 @@ func wrapHue(h float64) float64 {
 // Format renders a color in the named space. Recognized spaces are listed in
 // Spaces.
 func Format(c Color, space string) (string, error) {
-	switch strings.ToLower(strings.TrimSpace(space)) {
+	space = strings.ToLower(strings.TrimSpace(space))
+	switch space {
 	case "hex":
 		return c.Hex(), nil
 	case "rgb":
@@ -322,6 +338,8 @@ func Format(c Color, space string) (string, error) {
 	case "oklch":
 		l, chroma, h := ToOKLCH(c)
 		return fmt.Sprintf("oklch(%s, %s, %s)", num(l, 4), num(chroma, 4), num(h, 2)), nil
+	case "srgb", "display-p3", "a98-rgb", "prophoto-rgb", "rec2020":
+		return FormatWideGamut(c, space)
 	}
 	return "", fmt.Errorf("unknown color space %q (want one of %s)", space, strings.Join(Spaces, ", "))
 }
