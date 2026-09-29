@@ -134,9 +134,6 @@ func signPow(v, exp float64) float64 {
 const (
 	a98Gamma = 563.0 / 256.0
 
-	rec2020Alpha = 1.09929682680944
-	rec2020Beta  = 0.018053968510807
-
 	prophotoEt  = 1.0 / 512.0
 	prophotoEt2 = 16.0 / 512.0
 )
@@ -144,20 +141,13 @@ const (
 func a98ToLinear(v float64) float64   { return signPow(v, a98Gamma) }
 func a98FromLinear(v float64) float64 { return signPow(v, 1/a98Gamma) }
 
-func rec2020ToLinear(v float64) float64 {
-	abs := math.Abs(v)
-	if abs < rec2020Beta*4.5 {
-		return v / 4.5
-	}
-	return math.Copysign(math.Pow((abs+rec2020Alpha-1)/rec2020Alpha, 1/0.45), v)
-}
-
-func rec2020FromLinear(v float64) float64 {
-	if math.Abs(v) > rec2020Beta {
-		return math.Copysign(rec2020Alpha*math.Pow(math.Abs(v), 0.45)-(rec2020Alpha-1), v)
-	}
-	return 4.5 * v
-}
+// rec2020 uses a plain gamma 2.4 curve in both directions, which is the
+// display-referred reference EOTF of ITU-R BT.1886. It is NOT the BT.2020
+// scene-referred OETF (the alpha 1.0993 / beta 0.01805 curve with a 4.5 slope),
+// which CSS moved away from for this space. Nothing here is piecewise, and the
+// sign is preserved so out of gamut components still name a real color.
+func rec2020ToLinear(v float64) float64   { return signPow(v, 2.4) }
+func rec2020FromLinear(v float64) float64 { return signPow(v, 1/2.4) }
 
 func prophotoToLinear(v float64) float64 {
 	if math.Abs(v) <= prophotoEt2 {
