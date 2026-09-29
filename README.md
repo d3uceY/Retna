@@ -8,7 +8,8 @@ Contrast comes from WCAG 2.x by default, and APCA is available behind
 `--algorithm`.
 
 It writes nothing to disk and keeps no configuration file. Every command reads
-its arguments and prints to stdout.
+its arguments and prints to stdout. There is an [agent skill](skill/SKILL.md)
+that teaches a coding agent to drive it.
 
 ## Install
 
@@ -370,6 +371,32 @@ substitution is not silent.
 `--algorithm apca` returns Lc. The sign carries meaning: dark text on a light
 background is positive, and light text on a dark background is negative, so
 compare absolute values. The built in checks use the 45, 60 and 75 bands.
+
+## Using it from an AI agent
+
+[`skill/`](skill/SKILL.md) holds an agent skill for building and auditing UI
+color systems with Retna as the measuring instrument: pick a ramp, then check
+every text and surface pair instead of estimating a ratio. It carries reference
+docs on the CLI, palette recipes, dark mode, accessibility thresholds and color
+science.
+
+Copy the folder into your agent's skills directory:
+
+```
+cp -r skill ~/.copilot/skills/retna-color-expert     # VS Code / Copilot
+cp -r skill ~/.claude/skills/retna-color-expert      # Claude Code
+```
+
+It is plain markdown, so it reads fine on its own too. Start with
+[`skill/SKILL.md`](skill/SKILL.md), or go straight to
+[`skill/references/retna-cli.md`](skill/references/retna-cli.md) for the command
+reference.
+
+`skill/references/color-expert/` is a copy of
+[meodai/skill.color-expert](https://github.com/meodai/skill.color-expert) and keeps
+its own license, CC BY 4.0 with third-party material credited per file. The rest
+of the skill is MIT, like Retna. Details in
+[`skill/ATTRIBUTION.md`](skill/ATTRIBUTION.md).
 
 ## License
 
