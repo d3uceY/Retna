@@ -129,16 +129,21 @@ retna inspect "#3498db"
 ```
     Color
 
-HEX    #3498DB
-RGB    rgb(52, 152, 219)
-RGBA   rgba(52, 152, 219, 1)
-HSL    hsl(204.07, 69.87%, 53.14%)
-HSV    hsv(204.07, 76.26%, 85.88%)
-HWB    hwb(204.07 20.39% 14.12%)
-LAB    lab(59.5, -12.1, -43.14)
-LCH    lch(59.5, 44.8, 254.33)
-OKLAB  oklab(0.6531, -0.0618, -0.1197)
-OKLCH  oklch(0.6531, 0.1347, 242.69)
+HEX           #3498DB
+RGB           rgb(52, 152, 219)
+RGBA          rgba(52, 152, 219, 1)
+HSL           hsl(204.07, 69.87%, 53.14%)
+HSV           hsv(204.07, 76.26%, 85.88%)
+HWB           hwb(204.07 20.39% 14.12%)
+LAB           lab(59.5, -12.1, -43.14)
+LCH           lch(59.5, 44.8, 254.33)
+OKLAB         oklab(0.6531, -0.0618, -0.1197)
+OKLCH         oklch(0.6531, 0.1347, 242.69)
+SRGB          color(srgb 0.2039 0.5961 0.8588)
+DISPLAY-P3    color(display-p3 0.3208 0.588 0.8369)
+A98-RGB       color(a98-rgb 0.3725 0.5905 0.8459)
+PROPHOTO-RGB  color(prophoto-rgb 0.4327 0.51 0.7876)
+REC2020       color(rec2020 0.3766 0.5394 0.8141)
 
 Relative luminance
 Luminance  0.2830
@@ -245,16 +250,35 @@ allows them. The CSS color names are matched case insensitively, so
 `rebeccapurple`, `RebeccaPurple` and `#663399` all name the same color.
 `transparent` is accepted too.
 
-Wide gamut input is not supported yet, so `color(srgb ...)`, `display-p3` and
-`rec2020` will be rejected.
+The wide gamut spaces arrive through CSS `color()`, which names its space
+first:
+
+```
+color(srgb 0.2039 0.5961 0.8588)     color(display-p3 0.3208 0.588 0.8369)
+color(a98-rgb 0.3725 0.5905 0.8459)  color(prophoto-rgb 0.4327 0.51 0.7876)
+color(rec2020 0.3766 0.5394 0.8141)  color(display-p3 1 0 0 / 0.5)
+```
+
+Components take numbers or percentages and are allowed to fall outside 0..1,
+which is how CSS names colors the sRGB gamut cannot hold. Retna keeps those
+values rather than treating them as mistakes, because a negative component
+still names a real color. Clipping only happens when the color has to be drawn
+as sRGB.
 
 ## Color spaces
 
-`hex`, `rgb`, `rgba`, `hsl`, `hsv`, `hwb`, `lab`, `lch`, `oklab`, `oklch`.
+```
+hex, rgb, rgba, hsl, hsv, hwb, lab, lch, oklab, oklch,
+srgb, display-p3, a98-rgb, prophoto-rgb, rec2020
+```
 
-Lab and LCH use the D50 white point, which is what CSS specifies. OKLab and
-OKLCH use D65. A conversion that lands outside the sRGB gamut is clipped to the
-nearest displayable color.
+Lab, LCH and ProPhoto use the D50 white point, which is what CSS specifies.
+OKLab, OKLCH, display-p3, a98-rgb and rec2020 use D65.
+
+Turning an sRGB color into one of the wider spaces cannot land outside their
+gamuts, so those components are reported without clipping. A clipped component
+would name a different color. Going the other way, a `color()` value outside
+the sRGB gamut is clipped to the nearest displayable color.
 
 ## JSON output
 
@@ -294,6 +318,11 @@ With `--against`, the measurements become a list under `results`. Selecting
   "lch": [59.4961, 44.8011, 254.3263],
   "oklab": [0.6531, -0.0618, -0.1197],
   "oklch": [0.6531, 0.1347, 242.6867],
+  "srgb": [0.2039, 0.5961, 0.8588],
+  "display-p3": [0.3208, 0.588, 0.8369],
+  "a98-rgb": [0.3725, 0.5905, 0.8459],
+  "prophoto-rgb": [0.4327, 0.51, 0.7876],
+  "rec2020": [0.3766, 0.5394, 0.8141],
   "luminance": 0.283
 }
 ```
@@ -302,7 +331,8 @@ Each group is one line here for readability; the command itself indents every
 number onto its own line.
 
 Hues are degrees, saturation style channels run from 0 to 1, Lab lightness runs
-from 0 to 100, and OKLab lightness runs from 0 to 1.
+from 0 to 100, and OKLab lightness runs from 0 to 1. The wide gamut components
+are raw, so they can sit outside 0..1.
 
 ## Transparency
 
