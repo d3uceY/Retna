@@ -3,6 +3,9 @@
 /retna.exe
 *.exe
 
+# GoReleaser working directory
+/dist/
+
 # Test binaries
 *.test
 *.out
