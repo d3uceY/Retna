@@ -172,6 +172,16 @@ func selectAlgorithms(name string, all bool) ([]contrast.Algorithm, error) {
 	return algorithms, nil
 }
 
+// hasAlgorithm reports whether name is among the selected algorithms.
+func hasAlgorithm(algorithms []contrast.Algorithm, name string) bool {
+	for _, algorithm := range algorithms {
+		if algorithm.Name() == name {
+			return true
+		}
+	}
+	return false
+}
+
 // flatten resolves alpha the way a browser paints it: the background sits on a
 // white page, then the foreground sits on that background.
 func flatten(fg, bg color.Color) (color.Color, color.Color) {
@@ -213,10 +223,17 @@ func writeContrastText(w io.Writer, rows []contrastRow, opts contrastOptions, be
 	if opts.minSet {
 		writeMinVerdict(w, rows, opts.min, below)
 	}
-	if composited {
-		fmt.Fprintln(w)
-		fmt.Fprintln(w, output.Warn.Render("note: translucent colors were composited over white before measuring"))
+	noteCompositing(w, composited)
+}
+
+// noteCompositing explains an alpha substitution once, in the words every
+// command uses for it.
+func noteCompositing(w io.Writer, composited bool) {
+	if !composited {
+		return
 	}
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, output.Warn.Render("note: translucent colors were composited over white before measuring"))
 }
 
 func writeSingleContrast(w io.Writer, row contrastRow) {
