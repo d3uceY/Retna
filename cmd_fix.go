@@ -66,8 +66,11 @@ func runFix(w io.Writer, input string, opts fixOptions) error {
 			return err
 		}
 	}
-	if target < 1 {
-		return fmt.Errorf("target must be at least 1:1, got %.2f", target)
+	if !positiveFinite(target) || target < 1 {
+		return fmt.Errorf("target must be a ratio of at least 1:1, got %v", target)
+	}
+	if opts.suggest < 1 {
+		return fmt.Errorf("--suggest must be at least 1, got %d", opts.suggest)
 	}
 
 	flatFG, flatBG := flatten(fg, bg)
