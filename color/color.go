@@ -37,7 +37,21 @@ func (c Color) Channels() (r, g, b uint8) {
 }
 
 func byteChannel(v float64) uint8 {
-	return uint8(math.Round(clamp01(v) * 255))
+	// The epsilon absorbs float noise that lands an exact .5 boundary a hair
+	// below it. Without it hsl(270, 100%, 50%) quantizes to #7F00FF instead of
+	// #8000FF, because 0.75 + 1/3 rounds down in binary.
+	return uint8(math.Round(clamp01(v)*255 + 1e-9))
+}
+
+// isFinite reports whether v is a real number. A conversion that overflows
+// yields an infinity or a NaN, and neither may be mistaken for a color.
+func isFinite(v float64) bool {
+	return !math.IsNaN(v) && !math.IsInf(v, 0)
+}
+
+// finite reports whether every channel is a real number.
+func (c Color) finite() bool {
+	return isFinite(c.R) && isFinite(c.G) && isFinite(c.B) && isFinite(c.A)
 }
 
 func clamp01(v float64) float64 {
@@ -61,18 +75,23 @@ func (c Color) Linear() (r, g, b float64) {
 	return srgbToLinear(c.R), srgbToLinear(c.G), srgbToLinear(c.B)
 }
 
+// srgbToLinear decodes one sRGB channel. The sign is preserved because
+// wide gamut components legitimately go negative outside the sRGB gamut.
 func srgbToLinear(v float64) float64 {
-	if v <= 0.04045 {
+	abs := math.Abs(v)
+	if abs <= 0.04045 {
 		return v / 12.92
 	}
-	return math.Pow((v+0.055)/1.055, 2.4)
+	return math.Copysign(math.Pow((abs+0.055)/1.055, 2.4), v)
 }
 
+// linearToSrgb encodes one sRGB channel, again preserving the sign.
 func linearToSrgb(v float64) float64 {
-	if v <= 0.0031308 {
+	abs := math.Abs(v)
+	if abs <= 0.0031308 {
 		return v * 12.92
 	}
-	return 1.055*math.Pow(v, 1.0/2.4) - 0.055
+	return math.Copysign(1.055*math.Pow(abs, 1.0/2.4)-0.055, v)
 }
 
 // fromLinear builds a color from linear-light sRGB channels. Channels outside
