@@ -13,6 +13,12 @@ go build -o retna .
 On Windows the output is `retna.exe`. To put it on your PATH, move that binary
 somewhere already on PATH, or add its folder to PATH.
 
+To stamp a version into the binary, override the `cmd.version` variable:
+
+```
+go build -ldflags "-X github.com/d3uceY/Retna/cmd.version=v1.2.3" -o retna .
+```
+
 ## Test
 
 ```
@@ -24,16 +30,22 @@ Every package has tests. The conversions are checked against published
 reference values, and the formatters are checked by converting each space and
 parsing the result back.
 
+Tests sit next to the code they cover, so a package carries its tests with it
+when it moves. The CLI tests live in `cmd/` beside the commands they exercise,
+and there are no test files at the module root.
+
 ## Project layout
 
 ```
-main.go            root command, version, shared flag helpers
-cmd_contrast.go    contrast, including --against and --min
-cmd_convert.go     convert, including --to
-cmd_inspect.go     inspect
-cmd_palette.go     palette contrast, including file and stdin input
-cmd_readable.go    readable, plus the level lookup
-cmd_fix.go         fix, including the OKLab lightness search
+main.go            entry point, a one line call into cmd
+cmd/
+  root.go          root command, version, shared flag helpers
+  contrast.go      contrast, including --against and --min
+  convert.go       convert, including --to
+  inspect.go       inspect
+  palette.go       palette contrast, including file and stdin input
+  readable.go      readable, plus the level lookup
+  fix.go           fix, including the OKLab lightness search
 color/
   color.go         Color type, luminance, sRGB companding
   parse.go         parsing every input notation
