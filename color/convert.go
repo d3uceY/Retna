@@ -188,9 +188,14 @@ func LCH(l, chroma, h, alpha float64) Color {
 // 4e-8 in OKLab. Reporting that residue as an angle makes a gray print a
 // different hue in each space, so it is reported as 0 instead. Both thresholds
 // sit far below any chroma the eye can see.
+//
+// These are CSS Color 4's own per space epsilons for a powerless hue (0.0015
+// for LCH in §9.3, 0.000004 for OkLCh in §9.4), not invented numbers. CSS
+// treats such a hue as missing (none); printing 0 is Retna's own choice, and
+// it is why a gray reports hue 0 rather than an arbitrary angle.
 const (
-	achromaticLab   = 1e-4
-	achromaticOKLab = 1e-6
+	achromaticLab   = 0.0015
+	achromaticOKLab = 0.000004
 )
 
 // ToLCH converts to Lab lightness, chroma and hue in degrees.
@@ -277,24 +282,36 @@ func xyzToSrgbLinear(x, y, z float64) (r, g, b float64) {
 	return r, g, b
 }
 
+// These are the linear Bradford matrices from the CSS Color 4 sample code
+// (§19). The updated values were computed from the inverse of the cone
+// response matrix rather than from rounded intermediate values, so this pair
+// is an exact inverse (to about 1e-16) and it carries the D65 white point onto
+// the chromaticity derived D50 below to the same precision. The older pair
+// (1.0479298208405488 ...) was off by about 1e-7 and drifted on round trips.
 func d65ToD50(x, y, z float64) (float64, float64, float64) {
-	return 1.0479298208405488*x + 0.0229467933410191*y - 0.0501922295431356*z,
-		0.0296278156881593*x + 0.9904344845732490*y - 0.0170738250293851*z,
-		-0.0092430581525912*x + 0.0150551448965779*y + 0.7518742899580008*z
+	return 1.0479297925449969*x + 0.022946870601609652*y - 0.05019226628920524*z,
+		0.02962780877005599*x + 0.9904344267538799*y - 0.017073799063418826*z,
+		-0.009243040646204504*x + 0.015055191490298152*y + 0.7518742814281371*z
 }
 
 func d50ToD65(x, y, z float64) (float64, float64, float64) {
-	return 0.9554734527042182*x - 0.0230985368742614*y + 0.0632593086610217*z,
-		-0.0283697069632081*x + 1.0099954580058226*y + 0.0210413989669430*z,
-		0.0123140016883199*x - 0.0205076964334779*y + 1.3303659366080753*z
+	return 0.955473421488075*x - 0.02309845494876471*y + 0.06325924320057072*z,
+		-0.0283697093338637*x + 1.0099953980813041*y + 0.021041441191917323*z,
+		0.012314014864481998*x - 0.020507649298898964*y + 1.330365926242124*z
 }
 
 const (
 	labEps   = 216.0 / 24389.0
 	labKappa = 24389.0 / 27.0
-	d50Xn    = 0.3457 / 0.3585
-	d50Yn    = 1.0
-	d50Zn    = (1.0 - 0.3457 - 0.3585) / 0.3585
+
+	// The D50 white point is derived from the chromaticity (0.3457, 0.3585)
+	// that CSS Color 4 defines in its white point table (§2), which is what the
+	// spec's sample code uses too. The rounded ICC style pair (0.9642, 0.8251)
+	// is a different, earlier draft convention, and mixing it with the Bradford
+	// matrices above would tilt Lab a and b everywhere. Do not reintroduce it.
+	d50Xn = 0.3457 / 0.3585
+	d50Yn = 1.0
+	d50Zn = (1.0 - 0.3457 - 0.3585) / 0.3585
 )
 
 func labF(t float64) float64 {
