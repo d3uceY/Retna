@@ -11,10 +11,26 @@ import (
 // ErrUnknownFormat is returned when a string is not a color Retna recognizes.
 var ErrUnknownFormat = errors.New("unrecognized color format")
 
+// ErrOutOfRange is returned when a color parses but the conversion math cannot
+// represent it. Extreme values overflow into infinities and then into NaNs,
+// which would otherwise be rounded into a plausible looking black.
+var ErrOutOfRange = errors.New("color out of range")
+
 // Parse turns a CSS color string into an sRGB color. It accepts hex, the
-// rgb, hsl, hsv, hwb, lab, lch, oklab and oklch functions, and the CSS named
-// colors.
+// rgb, hsl, hsv, hwb, lab, lch, oklab and oklch functions, the CSS color()
+// spaces, and the CSS named colors.
 func Parse(s string) (Color, error) {
+	c, err := parse(s)
+	if err != nil {
+		return Color{}, err
+	}
+	if !c.finite() {
+		return Color{}, fmt.Errorf("%w: %q", ErrOutOfRange, s)
+	}
+	return c, nil
+}
+
+func parse(s string) (Color, error) {
 	in := strings.TrimSpace(s)
 	if in == "" {
 		return Color{}, errors.New("empty color")
@@ -28,17 +44,20 @@ func Parse(s string) (Color, error) {
 		return parseHex(hex)
 	}
 	if i := strings.IndexByte(in, '('); i >= 0 {
-		return parseFunc(lower[:i], in[i:])
+		return parseFunc(in[:i], in[i:])
 	}
 	return parseHex(in)
 }
 
 func parseFunc(name, call string) (Color, error) {
+	// The name comes from the original string, so lowercase it here rather than
+	// slicing an already lowercased copy, which can change length.
+	fn := strings.ToLower(strings.TrimSpace(name))
 	args, err := callArgs(call)
 	if err != nil {
 		return Color{}, err
 	}
-	switch strings.TrimSpace(name) {
+	switch fn {
 	case "rgb", "rgba":
 		return parseRGB(args)
 	case "hsl", "hsla":
@@ -55,8 +74,38 @@ func parseFunc(name, call string) (Color, error) {
 		return parseOKLab(args)
 	case "oklch":
 		return parseOKLCH(args)
+	case "color":
+		return parseColorSpace(args)
 	}
-	return Color{}, fmt.Errorf("%w: %q", ErrUnknownFormat, name)
+	return Color{}, fmt.Errorf("%w: %q", ErrUnknownFormat, fn)
+}
+
+// parseColorSpace handles the CSS color() function, which names its space as
+// the first argument: color(display-p3 1 0 0).
+func parseColorSpace(args []string) (Color, error) {
+	if len(args) < 4 || len(args) > 5 {
+		return Color{}, fmt.Errorf("color() takes a space and three components, got %d values", len(args))
+	}
+	name := strings.ToLower(strings.TrimSpace(args[0]))
+	space, ok := gamuts[name]
+	if !ok {
+		return Color{}, fmt.Errorf("%w: color(%s ...) (want one of %s)", ErrUnknownFormat, args[0], strings.Join(wideGamutNames, ", "))
+	}
+
+	var channels [3]float64
+	for i := range channels {
+		v, err := number(args[i+1], 1)
+		if err != nil {
+			return Color{}, fmt.Errorf("color(%s) channel %d: %w", name, i+1, err)
+		}
+		channels[i] = v
+	}
+
+	a, err := alphaArg(args, 4)
+	if err != nil {
+		return Color{}, err
+	}
+	return space.toSRGB(channels[0], channels[1], channels[2], a), nil
 }
 
 // callArgs splits "name(a b c / d)" into its channel strings. Commas and
@@ -307,6 +356,10 @@ func number(s string, scale float64) (float64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("invalid number %q", raw)
 	}
+	// Go accepts "NaN" and "Inf", which are not color components.
+	if !isFinite(v) {
+		return 0, fmt.Errorf("number %q is not a real value", raw)
+	}
 	if raw != s {
 		return v / 100 * scale, nil
 	}
@@ -315,23 +368,25 @@ func number(s string, scale float64) (float64, error) {
 
 func angle(s string) (float64, error) {
 	t := strings.ToLower(strings.TrimSpace(s))
-	switch {
-	case strings.HasSuffix(t, "grad"):
-		v, err := strconv.ParseFloat(strings.TrimSuffix(t, "grad"), 64)
-		return wrapHue(v * 0.9), err
-	case strings.HasSuffix(t, "deg"):
-		v, err := strconv.ParseFloat(strings.TrimSuffix(t, "deg"), 64)
-		return wrapHue(v), err
-	case strings.HasSuffix(t, "rad"):
-		v, err := strconv.ParseFloat(strings.TrimSuffix(t, "rad"), 64)
-		return wrapHue(v * 180 / math.Pi), err
-	case strings.HasSuffix(t, "turn"):
-		v, err := strconv.ParseFloat(strings.TrimSuffix(t, "turn"), 64)
-		return wrapHue(v * 360), err
+	value, unit := t, ""
+	// "grad" has to be tested before "rad", which is a suffix of it.
+	for _, candidate := range []string{"grad", "deg", "rad", "turn"} {
+		if strings.HasSuffix(t, candidate) {
+			value, unit = strings.TrimSuffix(t, candidate), candidate
+			break
+		}
 	}
-	v, err := strconv.ParseFloat(t, 64)
-	if err != nil {
+	v, err := strconv.ParseFloat(strings.TrimSpace(value), 64)
+	if err != nil || !isFinite(v) {
 		return 0, fmt.Errorf("invalid angle %q", s)
+	}
+	switch unit {
+	case "grad":
+		v *= 0.9
+	case "rad":
+		v *= 180 / math.Pi
+	case "turn":
+		v *= 360
 	}
 	return wrapHue(v), nil
 }
