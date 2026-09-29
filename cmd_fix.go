@@ -69,6 +69,10 @@ func runFix(w io.Writer, input string, opts fixOptions) error {
 	if !positiveFinite(target) || target < 1 {
 		return fmt.Errorf("target must be a ratio of at least 1:1, got %v", target)
 	}
+	// Black on white is the highest ratio there is, so nothing can reach more.
+	if target > 21 {
+		return fmt.Errorf("target cannot be higher than 21:1, got %v", target)
+	}
 	if opts.suggest < 1 {
 		return fmt.Errorf("--suggest must be at least 1, got %d", opts.suggest)
 	}
@@ -163,16 +167,21 @@ func passingColors(fg, bg color.Color, target float64, count int) []fixedColor {
 			break
 		}
 		candidate := color.OKLCH(l, chroma, hue, 1)
-		ratio := ratioOf(candidate, bg)
+		// Snap to a color a screen can show before measuring it. The unquantized
+		// value can sit on the far side of the target from the byte triple it
+		// rounds to, which would report a pass for a hex that actually fails.
+		r8, g8, b8 := candidate.Channels()
+		quantized := color.RGB8(r8, g8, b8)
+		ratio := ratioOf(quantized, bg)
 		if ratio < target {
 			continue
 		}
-		hex := candidate.Hex()
+		hex := quantized.Hex()
 		if seen[hex] {
 			continue
 		}
 		seen[hex] = true
-		out = append(out, fixedColor{color: candidate, hex: hex, ratio: ratio})
+		out = append(out, fixedColor{color: quantized, hex: hex, ratio: ratio})
 	}
 	return out
 }
