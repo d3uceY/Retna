@@ -39,9 +39,12 @@ func TestParseRejectsNonFinite(t *testing.T) {
 // TestParseRejectsOverflow covers values that are finite going in but overflow
 // inside the conversion. The result was NaN, which rendered as #000000 with a
 // zero exit code.
+//
+// Lab lightness is not in this list any more: CSS clamps it to 0..100 at
+// parsed-value time, so lab(1e300 0 0) is white rather than an error. The
+// opponent axes are still unbounded targets for an overflow.
 func TestParseRejectsOverflow(t *testing.T) {
 	cases := []string{
-		"lab(1e300 0 0)",
 		"lab(50 1e300 0)",
 		"lch(50 1e300 0)",
 		"oklab(0 1e300 0)",
