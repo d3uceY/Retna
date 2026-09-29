@@ -247,10 +247,42 @@ func TestRunConvertDefaultsToAllSpaces(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, space := range []string{"HEX", "RGB", "RGBA", "HSL", "HSV", "HWB", "LAB", "LCH", "OKLAB", "OKLCH"} {
+	for _, space := range []string{"HEX", "RGB", "RGBA", "HSL", "HSV", "HWB", "LAB", "LCH", "OKLAB", "OKLCH", "SRGB", "DISPLAY-P3", "A98-RGB", "PROPHOTO-RGB", "REC2020"} {
 		if !strings.Contains(out, space) {
 			t.Errorf("missing %s\n%s", space, out)
 		}
+	}
+}
+
+func TestRunConvertWideGamut(t *testing.T) {
+	out, _, err := run(t, func(w *bytes.Buffer) (int, error) {
+		return 0, runConvert(w, convertOptions{input: "red", to: []string{"display-p3", "rec2020"}})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "color(display-p3 0.9175 0.2003 0.1386)") {
+		t.Errorf("display-p3 value is wrong\n%s", out)
+	}
+	if !strings.Contains(out, "color(rec2020 ") {
+		t.Errorf("rec2020 value is missing\n%s", out)
+	}
+}
+
+// TestRunContrastAcceptsColorFunction checks the whole pipeline: a color()
+// input is parsed, converted to sRGB and then measured.
+func TestRunContrastAcceptsColorFunction(t *testing.T) {
+	out, _, err := run(t, func(w *bytes.Buffer) (int, error) {
+		return runContrast(w, contrastOptions{foreground: "color(display-p3 1 0 0)", background: "white"})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "#FF0000") {
+		t.Errorf("the P3 red primary should land on sRGB red\n%s", out)
+	}
+	if !strings.Contains(out, "4.00:1") {
+		t.Errorf("expected a 4.00:1 ratio\n%s", out)
 	}
 }
 
