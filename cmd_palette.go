@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -97,11 +98,15 @@ func readColorFile(cmd *cobra.Command, path string) ([]string, error) {
 		data, err = os.ReadFile(path)
 	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reading colors from %s: %w", path, err)
 	}
 
+	// Windows editors write a UTF-8 BOM without asking, and it would otherwise
+	// end up glued to the first color on the first line.
+	text := strings.TrimPrefix(string(data), "\ufeff")
+
 	var out []string
-	for _, line := range strings.Split(string(data), "\n") {
+	for _, line := range strings.Split(text, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "//") {
 			continue
