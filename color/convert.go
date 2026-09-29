@@ -183,10 +183,23 @@ func LCH(l, chroma, h, alpha float64) Color {
 	return Lab(l, chroma*math.Cos(rad), chroma*math.Sin(rad), alpha)
 }
 
+// Achromatic thresholds. Hue carries no information below these, and the
+// conversion leaves a small residue on a neutral color: about 8e-6 in Lab and
+// 4e-8 in OKLab. Reporting that residue as an angle makes a gray print a
+// different hue in each space, so it is reported as 0 instead. Both thresholds
+// sit far below any chroma the eye can see.
+const (
+	achromaticLab   = 1e-4
+	achromaticOKLab = 1e-6
+)
+
 // ToLCH converts to Lab lightness, chroma and hue in degrees.
 func ToLCH(c Color) (l, chroma, h float64) {
 	l, a, b := ToLab(c)
 	chroma = math.Hypot(a, b)
+	if chroma < achromaticLab {
+		return l, chroma, 0
+	}
 	h = math.Atan2(b, a) * 180 / math.Pi
 	if h < 0 {
 		h += 360
@@ -227,6 +240,9 @@ func OKLCH(l, chroma, h, alpha float64) Color {
 func ToOKLCH(c Color) (l, chroma, h float64) {
 	l, a, b := ToOKLab(c)
 	chroma = math.Hypot(a, b)
+	if chroma < achromaticOKLab {
+		return l, chroma, 0
+	}
 	h = math.Atan2(b, a) * 180 / math.Pi
 	if h < 0 {
 		h += 360
