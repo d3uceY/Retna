@@ -210,13 +210,29 @@ Before calling a palette done, every one of these should be a command you actual
 
 ## References
 
-- [references/retna-cli.md](references/retna-cli.md) — every command, flag, JSON shape, exit code, input format
-- [references/palette-recipes.md](references/palette-recipes.md) — worked recipes: brand ramp, semantic tokens, dark theme, chart palette
-- [references/accessibility.md](references/accessibility.md) — WCAG vs APCA, the real numbers, non-text contrast, CI
-- [references/dark-mode.md](references/dark-mode.md) — light/dark token scales and the mistakes that cause dark-mode contrast bugs
-- [references/color-science.md](references/color-science.md) — spaces, gamut behavior, HSL's failures, harmony, naming
-- [references/color-expert/INDEX.md](references/color-expert/INDEX.md) — 182 files of color science, theory and technique (ripped from `meodai/skill.color-expert`, CC BY 4.0)
-- [ATTRIBUTION.md](ATTRIBUTION.md) — what came from where
+Route by task. Don't read the tree.
+
+| Situation | Read |
+| --- | --- |
+| Any number you are about to publish | run `retna`, then [references/retna-cli.md](references/retna-cli.md) for flags, JSON shapes and exit codes |
+| A ramp, tokens, a theme, a chart palette | [references/palette-recipes.md](references/palette-recipes.md) |
+| Contrast thresholds, WCAG vs APCA, non-text, CVD, CI gates | [references/accessibility.md](references/accessibility.md) |
+| Light/dark token scales, dark-mode bugs | [references/dark-mode.md](references/dark-mode.md) |
+| Spaces, gamut behavior, HSL's failures, harmony, naming | [references/color-science.md](references/color-science.md) |
+| Anything else about color — history, pigment, appearance models, a named library or technique, dataviz colormaps | [references/color-expert/INDEX.md](references/color-expert/INDEX.md), then the one file it names |
+
+`INDEX.md` is a lookup table with a one-line summary and a source link per file, so it routes
+in one read. The library is 181 files; open the one that matches instead of loading the tree.
+Two things worth looking up rather than recalling: **why** a measurement behaves the way it
+does, and any color claim that isn't about the color in front of you. The same reason the
+numbers get measured is the reason the general color questions get looked up.
+
+The five authored references above are self-contained; a recipe that needs a threshold cites
+[references/accessibility.md](references/accessibility.md) rather than the library.
+
+`references/color-expert/` is a copy of `meodai/skill.color-expert` (CC BY 4.0, with
+third-party material credited per file). [ATTRIBUTION.md](ATTRIBUTION.md) has the licensing
+split.
 
 Related skills: `refactoring-ui` (grayscale-first hierarchy, spacing, type — the non-color half
 of a good UI), `impeccable` (frontend polish, motion, states), `top-design` (dramatic

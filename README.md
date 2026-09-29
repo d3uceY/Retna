@@ -374,7 +374,7 @@ compare absolute values. The built in checks use the 45, 60 and 75 bands.
 
 ## Using it from an AI agent
 
-[`skill/`](skill/SKILL.md) holds an agent skill for building and auditing UI
+[`skill/SKILL.md`](skill/SKILL.md) is an agent skill for building and auditing UI
 color systems with Retna as the measuring instrument: pick a ramp, then check
 every text and surface pair instead of estimating a ratio. It carries reference
 docs on the CLI, palette recipes, dark mode, accessibility thresholds and color
@@ -387,16 +387,18 @@ cp -r skill ~/.copilot/skills/retna-color-expert     # VS Code / Copilot
 cp -r skill ~/.claude/skills/retna-color-expert      # Claude Code
 ```
 
-It is plain markdown, so it reads fine on its own too. Start with
-[`skill/SKILL.md`](skill/SKILL.md), or go straight to
-[`skill/references/retna-cli.md`](skill/references/retna-cli.md) for the command
-reference.
+It is plain markdown and nothing is fetched at runtime, so a clone already has
+everything: read [`skill/SKILL.md`](skill/SKILL.md) from the checkout, or start
+with [`skill/references/retna-cli.md`](skill/references/retna-cli.md) for the
+command reference. Installing with `go install`, Homebrew or a release archive
+gives you the binary and nothing else, so clone the repo to get `skill/`.
 
-`skill/references/color-expert/` is a copy of
-[meodai/skill.color-expert](https://github.com/meodai/skill.color-expert) and keeps
-its own license, CC BY 4.0 with third-party material credited per file. The rest
-of the skill is MIT, like Retna. Details in
-[`skill/ATTRIBUTION.md`](skill/ATTRIBUTION.md).
+`skill/references/color-expert/` is 2.4 MB of the folder's 2.5 MB. It is a copy
+of [meodai/skill.color-expert](https://github.com/meodai/skill.color-expert) and
+keeps its own license, CC BY 4.0 with third-party material credited per file,
+while the rest of the skill is MIT, like Retna. Details in
+[`skill/ATTRIBUTION.md`](skill/ATTRIBUTION.md). Dropping that one subfolder leaves
+an 88 KB skill that still works, minus its links into the deep references.
 
 ## License
 
