@@ -329,3 +329,52 @@ func TestSpacesListsEveryGamut(t *testing.T) {
 		t.Errorf("gamuts has %d entries but wideGamutNames has %d", len(gamuts), len(wideGamutNames))
 	}
 }
+
+// TestRec2020UsesGamma24 pins the rec2020 transfer function to the plain gamma
+// 2.4 curve CSS specifies (the BT.1886 reference EOTF), not the scene referred
+// BT.2020 OETF with its 1.0993 / 0.01805 constants and 4.5 slope. The two
+// disagree by a factor of two near black, and the difference is silent.
+func TestRec2020UsesGamma24(t *testing.T) {
+	for _, v := range []float64{-1, -0.5, -0.01805, 0, 0.01805, 0.1, 0.5, 1} {
+		want := math.Copysign(math.Pow(math.Abs(v), 2.4), v)
+		if got := rec2020ToLinear(v); got != want {
+			t.Errorf("rec2020ToLinear(%v) = %v, want %v", v, got, want)
+		}
+		wantBack := math.Copysign(math.Pow(math.Abs(v), 1/2.4), v)
+		if got := rec2020FromLinear(v); got != wantBack {
+			t.Errorf("rec2020FromLinear(%v) = %v, want %v", v, got, wantBack)
+		}
+	}
+
+	// The old OETF would decode these two values to 0.004011 and 0.100568.
+	if got := rec2020ToLinear(0.01805); math.Abs(got-0.004011) < 0.001 {
+		t.Errorf("rec2020ToLinear(0.01805) = %v, which looks like the old BT.2020 OETF", got)
+	}
+}
+
+// TestBradfordMatricesAreExactInverses pins the D65 to D50 pair to the one CSS
+// publishes. That pair was recomputed from the cone response matrix rather than
+// from rounded intermediates, so it inverts to machine precision and it carries
+// the D65 white point onto the chromaticity derived D50 exactly. The earlier
+// pair was off by about 1e-7, which is small but shows up as drift.
+func TestBradfordMatricesAreExactInverses(t *testing.T) {
+	probes := [][3]float64{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0.3, 0.6, 0.9}}
+	for _, p := range probes {
+		x, y, z := d65ToD50(p[0], p[1], p[2])
+		r, g, b := d50ToD65(x, y, z)
+		for i, got := range [3]float64{r, g, b} {
+			if math.Abs(got-p[i]) > 1e-15 {
+				t.Errorf("D65 %v round tripped through D50 as %v", p, [3]float64{r, g, b})
+				break
+			}
+		}
+	}
+
+	x, y, z := d65ToD50(d65White[0], d65White[1], d65White[2])
+	for i, got := range [3]float64{x, y, z} {
+		if math.Abs(got-d50White[i]) > 1e-15 {
+			t.Errorf("D65 white adapted to D50 is %v, want %v", [3]float64{x, y, z}, d50White)
+			break
+		}
+	}
+}
