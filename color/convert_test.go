@@ -224,3 +224,37 @@ func TestClampKeepsChannels(t *testing.T) {
 		t.Fatalf("Clamp = %v", out)
 	}
 }
+
+// TestAchromaticHueIsZero keeps a gray from printing an arbitrary angle. The
+// conversion leaves a small residue on a neutral color (about 8e-6 in Lab and
+// 4e-8 in OKLab) and the residue points in a different direction in each space,
+// so both report 0.
+func TestAchromaticHueIsZero(t *testing.T) {
+	for _, in := range []string{"#000000", "#808080", "#FFFFFF", "#777777", "#F5F5F5"} {
+		c, err := Parse(in)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, chroma, hue := ToLCH(c); hue != 0 {
+			t.Errorf("ToLCH(%s) hue = %v at chroma %v, want 0", in, hue, chroma)
+		}
+		if _, chroma, hue := ToOKLCH(c); hue != 0 {
+			t.Errorf("ToOKLCH(%s) hue = %v at chroma %v, want 0", in, hue, chroma)
+		}
+	}
+}
+
+// TestChromaticHueSurvives guards the other direction, so the threshold above
+// cannot swallow a real hue.
+func TestChromaticHueSurvives(t *testing.T) {
+	c, err := Parse("red")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, hue := ToLCH(c); math.Abs(hue-40.86) > 0.05 {
+		t.Errorf("ToLCH hue = %v, want about 40.86", hue)
+	}
+	if _, _, hue := ToOKLCH(c); math.Abs(hue-29.23) > 0.05 {
+		t.Errorf("ToOKLCH hue = %v, want about 29.23", hue)
+	}
+}
