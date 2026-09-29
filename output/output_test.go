@@ -3,6 +3,7 @@ package output
 import (
 	"bytes"
 	"encoding/json"
+	"math"
 	"strings"
 	"testing"
 
@@ -126,10 +127,35 @@ func TestNewColorJSON(t *testing.T) {
 		t.Errorf("oklch = %v", view.OKLCH)
 	}
 
+	// color(srgb ...) components are the same sRGB values scaled to 0..1.
+	for i, want := range []float64{52, 152, 219} {
+		if math.Abs(view.SRGB[i]-want/255) > 1e-4 {
+			t.Errorf("srgb = %v, want it to match rgb %v", view.SRGB, view.RGB)
+			break
+		}
+	}
+
+	// The remaining gamuts all contain sRGB, so the color cannot fall outside
+	// 0..1 in any of them.
+	for name, group := range map[string][3]float64{
+		"display-p3":   view.DisplayP3,
+		"a98-rgb":      view.A98RGB,
+		"prophoto-rgb": view.ProPhoto,
+		"rec2020":      view.Rec2020,
+	} {
+		for i, v := range group {
+			if v < -1e-6 || v > 1+1e-6 {
+				t.Errorf("%s[%d] = %v, outside 0..1", name, i, v)
+			}
+		}
+	}
+
 	// Every group has to be present and finite so consumers can rely on them.
 	for name, group := range map[string][3]float64{
 		"hsl": view.HSL, "hsv": view.HSV, "hwb": view.HWB,
 		"lab": view.Lab, "lch": view.LCH, "oklab": view.OKLab, "oklch": view.OKLCH,
+		"srgb": view.SRGB, "display-p3": view.DisplayP3,
+		"a98-rgb": view.A98RGB, "prophoto-rgb": view.ProPhoto, "rec2020": view.Rec2020,
 	} {
 		for i, v := range group {
 			if v != v {
