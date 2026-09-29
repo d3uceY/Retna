@@ -1,0 +1,45 @@
+name: release
+
+# A release is a tag push, so the tag is the single source of truth for the
+# version. The workflow only matches v-prefixed tags, which keeps it from firing
+# on stray tags.
+on:
+  push:
+    tags:
+      - "v*"
+
+# Required for GoReleaser to create the release and upload the archives with the
+# built-in token. Nothing else needs a secret.
+permissions:
+  contents: write
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # GoReleaser walks the history to build the changelog.
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # Gate the release on the tests, so a broken tag cannot publish binaries.
+      - name: Vet and test
+        run: |
+          go vet ./...
+          go test ./...
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
