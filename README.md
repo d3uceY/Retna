@@ -12,7 +12,11 @@ its arguments and prints to stdout.
 
 ## Install
 
-Go 1.25 or newer is required.
+Prebuilt binaries for Linux, macOS and Windows are on the
+[releases page](https://github.com/d3uceY/Retna/releases). Unpack the archive
+and put `retna` somewhere on your PATH.
+
+With Go 1.25 or newer:
 
 ```
 go install github.com/d3uceY/Retna@latest
