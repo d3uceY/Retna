@@ -13,18 +13,6 @@ that teaches a coding agent to drive it.
 
 ## Install
 
-With npm, which needs Node 18 or newer:
-
-```
-npm install -g retna
-```
-
-Or without installing anything:
-
-```
-npx retna contrast "#777" "#fff"
-```
-
 On macOS, with Homebrew:
 
 ```
