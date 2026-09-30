@@ -130,10 +130,23 @@ Publishing by hand is not the supported path, but if you have to, run
 Publishing `0.0.0` straight out of a clean checkout, or a wrapper with no
 README, is the one way to get this wrong.
 
-The packages need a secret named `NPM_AUTH_TOKEN`, holding an npm token allowed
-to publish all seven. With 2FA on the account that means an automation token, or
-a granular token with read and write on the seven packages. Provenance is on, so
-both jobs ask for `id-token: write` and each published tarball carries an
+The packages need a secret named `NPM_AUTH_TOKEN`. It has to be a token npm will
+accept for publishing, and the failure when it will not is misleading: the token
+authenticates, provenance gets signed and logged, and then the publish stops
+with `E403 ... Two-factor authentication or granular access token with bypass
+2fa enabled is required`. That is a 403 rather than a 401, so it reads like a
+permissions problem when it is a token type problem. Either of these works:
+
+- A granular access token with `Read and write` permission, `Bypass 2FA`
+  enabled, and `All packages` selected. Not a list of packages: on the first
+  release none of the seven exists yet, so there is nothing to select, and a
+  token scoped to packages that do exist cannot create new ones.
+- A classic `Automation` token, which bypasses 2FA by definition. A classic
+  `Publish` token does not, because it wants a one time password that CI cannot
+  supply.
+
+Provenance is on, so both jobs ask for `id-token: write`. That is a workflow
+permission and nothing to do with the token; each published tarball carries an
 attestation naming the commit it was built from.
 
 Publishing a version twice is an error, so both jobs check the registry first
