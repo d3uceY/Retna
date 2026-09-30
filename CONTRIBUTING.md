@@ -103,9 +103,9 @@ anywhere, which is what makes an install with `--ignore-scripts` work.
 Nothing is downloaded on the user's machine and the release page is not used as
 a package registry. `npm-platform` in the workflow does the fetching, on the
 runner: it downloads the archive GoReleaser just uploaded, takes the binary out
-of it, drops it into the matching package and publishes that. The wrapper goes
-last, from `npm-wrapper`, because its `optionalDependencies` pin the six
-versions and it can only be published once they exist.
+of it, drops it into the matching package and stages that. The wrapper goes last,
+from `npm-wrapper`, because its `optionalDependencies` pin the six versions and
+it can only go out once they exist.
 
 The wrapper's README is generated rather than committed. npm renders a package
 page out of the published tarball, where the relative paths the root README uses
@@ -126,32 +126,76 @@ node npm/scripts/version.js v0.2.0
 
 Publishing by hand is not the supported path, but if you have to, run
 `node npm/scripts/version.js` and `node npm/scripts/readme.js` first, then
-`npm publish` from each package directory, platforms before the wrapper.
-Publishing `0.0.0` straight out of a clean checkout, or a wrapper with no
-README, is the one way to get this wrong.
+`npm stage publish` from each package directory, platforms before the wrapper,
+and approve each one. Publishing `0.0.0` straight out of a clean checkout, or a
+wrapper with no README, is the one way to get this wrong.
 
-The packages need a secret named `NPM_AUTH_TOKEN`. It has to be a token npm will
-accept for publishing, and the failure when it will not is misleading: the token
-authenticates, provenance gets signed and logged, and then the publish stops
-with `E403 ... Two-factor authentication or granular access token with bypass
-2fa enabled is required`. That is a 403 rather than a 401, so it reads like a
-permissions problem when it is a token type problem. Either of these works:
+### Releases are staged, not published
 
-- A granular access token with `Read and write` permission, `Bypass 2FA`
-  enabled, and `All packages` selected. Not a list of packages: on the first
-  release none of the seven exists yet, so there is nothing to select, and a
-  token scoped to packages that do exist cannot create new ones.
-- A classic `Automation` token, which bypasses 2FA by definition. A classic
-  `Publish` token does not, because it wants a one time password that CI cannot
-  supply.
+A release puts the seven packages in npm's staging area, and someone approves
+them with 2FA before they become installable. So `NPM_AUTH_TOKEN` is a stage-only
+granular token with no 2FA bypass, and it does not need to be anything else.
+Staged publishing exists so that bypass tokens stop being necessary; npm's own
+guidance is to delete them and use either a trust relationship or a stage-only
+token, which is what this repo does.
 
-Provenance is on, so both jobs ask for `id-token: write`. That is a workflow
-permission and nothing to do with the token; each published tarball carries an
-attestation naming the commit it was built from.
+Four things follow from that:
 
-Publishing a version twice is an error, so both jobs check the registry first
-and skip whatever is already there. That is what makes re-running a release
-workflow after a failure safe.
+- Nothing is live until it is approved. All seven packages, every version.
+  `npm stage list` shows what is waiting.
+- `npm stage publish` needs npm 11.15.0 or newer. Node 24.12 ships 11.6.2, which
+  is the only reason both jobs install npm before doing anything.
+- Staged and published versions share one index, so a version cannot be staged
+  twice. Re-running after a successful release is safe, because the `npm view`
+  guard skips what is already published. Re-running while something is staged
+  and unapproved fails instead, and `npm stage reject <stage-id>` clears it.
+- Staging a package that does not exist creates it, as a public `0.0.0-stage`
+  placeholder. That is what lets the seven new names exist before anything else
+  can be configured for them.
+
+A token that cannot stage stops the run with `E403 ... bypass 2fa enabled is
+required`, and one that can publish but wants a one-time password stops it with
+`EOTP: This operation requires a one-time password from your authenticator`.
+Neither reads like a token type problem, and both are one.
+
+### Moving to trusted publishing
+
+Once the seven packages exist, a trust relationship lets CI authenticate with
+OIDC instead of a token, and provenance is generated automatically rather than
+from the `--provenance` flag. The packages have to exist first, which is why this
+comes after a staged release and not before.
+
+With npm 11.15.0 or newer locally, logged in as yourself:
+
+```
+for p in retna retna-linux-x64 retna-linux-arm64 retna-darwin-x64 \
+         retna-darwin-arm64 retna-win32-x64 retna-win32-arm64; do
+  npm trust github "$p" --file release.yml --repo d3uceY/Retna \
+    --allow-stage-publish --yes
+  sleep 2
+done
+```
+
+`--file` is the workflow filename on its own, not its path. `--allow-stage-publish`
+and not `--allow-publish`: staging is the whole point, and npm recommends giving
+a trust relationship the narrower of the two. The first call prompts for 2FA and
+offers to skip it for the next five minutes, which covers the other six.
+`npm trust` refuses a token with 2FA bypass enabled, so use a session login.
+
+The same thing can be done by hand on each package's Settings page under
+Trusted publishing. Prefer the loop: npm does not validate those fields when you
+save them and every one is case sensitive, so a typo shows up only as `ENEEDAUTH`
+at the next release. `npm trust` errors if a relationship already exists there;
+`npm trust list <package>` prints the id and `npm trust revoke --id <id>`
+removes it so you can create the replacement.
+
+After a release has gone through OIDC, revoke the token and delete the secret.
+The CLI prefers OIDC when it is available and falls back to the token only when
+it is not, so nothing breaks in between.
+
+Provenance is on throughout, so both jobs ask for `id-token: write`. Under a
+trust relationship that permission is how npm authenticates at all; with the
+token it only feeds the attestation.
 
 ## Project layout
 
