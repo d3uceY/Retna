@@ -48,7 +48,8 @@ and tests the tree and then runs GoReleaser. GoReleaser builds amd64 and arm64
 binaries for Linux, macOS and Windows, packs each one with the license and
 readme, writes a checksum file and opens the GitHub release. The changelog comes
 from the commits since the previous tag, with `docs:`, `test:` and `chore:`
-commits filtered out.
+commits filtered out. Once the release is up, two more jobs publish the npm
+packages described under "The npm packages" below.
 
 The version the binary reports is injected at build time, so `retna version`
 always matches the tag. The placeholder in `cmd/root.go` is only what an
@@ -91,6 +92,54 @@ run. If that happens, either reinstall with `brew install --cask
 Homebrew casks are a macOS feature. GoReleaser emits Linux stanzas as well, but
 treat them as unused: Linux users should use the tarball.
 
+### The npm packages
+
+`npm/` holds what gets published to npm: the `retna` wrapper and six
+`retna-<platform>-<arch>` packages. Each platform package carries the bare
+binary for one os and cpu pair, so npm installs exactly one of them, picked by
+the machine, and `retna` is a launcher that execs it. There is no `postinstall`
+anywhere, which is what makes an install with `--ignore-scripts` work.
+
+Nothing is downloaded on the user's machine and the release page is not used as
+a package registry. `npm-platform` in the workflow does the fetching, on the
+runner: it downloads the archive GoReleaser just uploaded, takes the binary out
+of it, drops it into the matching package and publishes that. The wrapper goes
+last, from `npm-wrapper`, because its `optionalDependencies` pin the six
+versions and it can only be published once they exist.
+
+The wrapper's README is generated rather than committed. npm renders a package
+page out of the published tarball, where the relative paths the root README uses
+for the logo and the skill folder lead nowhere, so `npm/scripts/readme.js`
+rewrites every relative target to an absolute GitHub URL and writes
+`npm/README.md`. That file is in `.gitignore`: the root README stays the only
+copy of the documentation, and the package page is rebuilt from it on every
+release.
+
+The version is the tag, as everywhere else. `npm/scripts/version.js` takes the
+tag, strips the leading `v`, checks the rest is semver npm will accept, and
+writes the result into all seven `package.json` files and the wrapper's six
+pins. Those files sit at `0.0.0` in the repo and nothing bumps them by hand:
+
+```
+node npm/scripts/version.js v0.2.0
+```
+
+Publishing by hand is not the supported path, but if you have to, run
+`node npm/scripts/version.js` and `node npm/scripts/readme.js` first, then
+`npm publish` from each package directory, platforms before the wrapper.
+Publishing `0.0.0` straight out of a clean checkout, or a wrapper with no
+README, is the one way to get this wrong.
+
+The packages need a secret named `NPM_AUTH_TOKEN`, holding an npm token allowed
+to publish all seven. With 2FA on the account that means an automation token, or
+a granular token with read and write on the seven packages. Provenance is on, so
+both jobs ask for `id-token: write` and each published tarball carries an
+attestation naming the commit it was built from.
+
+Publishing a version twice is an error, so both jobs check the registry first
+and skip whatever is already there. That is what makes re-running a release
+workflow after a failure safe.
+
 ## Project layout
 
 ```
@@ -116,6 +165,13 @@ contrast/
 output/
   output.go        palette, swatches, ANSI aware column and table rendering
   json.go          the JSON view models
+npm/
+  package.json     the retna wrapper: bin, optionalDependencies, files
+  cli.js           execs the binary from the matching platform package
+  scripts/
+    version.js     writes the tag-derived version into every package file
+    readme.js      builds the npm README from the root README
+  platforms/       one package per os and arch pair, each holding bin/retna
 ```
 
 ## Design notes

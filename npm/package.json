@@ -1,0 +1,43 @@
+{
+  "name": "retna",
+  "version": "0.0.0",
+  "description": "Convert colors between color spaces and measure their contrast",
+  "keywords": [
+    "color",
+    "colour",
+    "contrast",
+    "wcag",
+    "apca",
+    "accessibility",
+    "a11y",
+    "oklch",
+    "color-spaces",
+    "cli"
+  ],
+  "homepage": "https://github.com/d3uceY/Retna",
+  "bugs": "https://github.com/d3uceY/Retna/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/d3uceY/Retna.git",
+    "directory": "npm"
+  },
+  "license": "MIT",
+  "author": "d3uceY",
+  "bin": {
+    "retna": "./cli.js"
+  },
+  "files": [
+    "cli.js"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "optionalDependencies": {
+    "retna-darwin-arm64": "0.0.0",
+    "retna-darwin-x64": "0.0.0",
+    "retna-linux-arm64": "0.0.0",
+    "retna-linux-x64": "0.0.0",
+    "retna-win32-arm64": "0.0.0",
+    "retna-win32-x64": "0.0.0"
+  }
+}

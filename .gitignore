@@ -6,6 +6,19 @@
 # GoReleaser working directory
 /dist/
 
+# Binaries unpacked out of a GitHub release into the npm platform packages.
+# The release workflow puts them here before publishing; they are not source.
+/npm/**/bin/
+
+# Installed dependencies, if anyone runs npm install or npm link in the
+# package tree while working on it.
+/node_modules/
+/npm/**/node_modules/
+
+# The npm README is generated from the root one by npm/scripts/readme.js, so
+# that the package page cannot drift from the repo's documentation.
+/npm/README.md
+
 # Test binaries
 *.test
 *.out

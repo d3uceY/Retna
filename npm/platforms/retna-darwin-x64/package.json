@@ -1,0 +1,22 @@
+{
+  "name": "retna-darwin-x64",
+  "version": "0.0.0",
+  "description": "The retna binary for macOS x64. Installed by the retna package, not directly.",
+  "homepage": "https://github.com/d3uceY/Retna",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/d3uceY/Retna.git",
+    "directory": "npm/platforms/retna-darwin-x64"
+  },
+  "license": "MIT",
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "files": [
+    "bin"
+  ],
+  "preferUnplugged": true
+}
