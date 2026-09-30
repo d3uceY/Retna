@@ -19,6 +19,10 @@
 # that the package page cannot drift from the repo's documentation.
 /npm/README.md
 
+# Local credentials and the release version for the by-hand publish path.
+# .env.example is the committed shape.
+/.env
+
 # Test binaries
 *.test
 *.out

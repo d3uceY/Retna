@@ -1,6 +1,6 @@
 {
   "name": "retna",
-  "version": "0.0.0",
+  "version": "0.1.1",
   "description": "Convert colors between color spaces and measure their contrast",
   "keywords": [
     "color",
@@ -33,11 +33,11 @@
     "node": ">=18"
   },
   "optionalDependencies": {
-    "retna-darwin-arm64": "0.0.0",
-    "retna-darwin-x64": "0.0.0",
-    "retna-linux-arm64": "0.0.0",
-    "retna-linux-x64": "0.0.0",
-    "retna-win32-arm64": "0.0.0",
-    "retna-win32-x64": "0.0.0"
+    "retna-darwin-arm64": "0.1.1",
+    "retna-darwin-x64": "0.1.1",
+    "retna-linux-arm64": "0.1.1",
+    "retna-linux-x64": "0.1.1",
+    "retna-win32-arm64": "0.1.1",
+    "retna-win32-x64": "0.1.1"
   }
 }

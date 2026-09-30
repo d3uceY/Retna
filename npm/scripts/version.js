@@ -28,12 +28,13 @@ const PACKAGES = [
 
 const SEMVER = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
 
-const given = (process.argv[2] ?? '').trim();
+const given = (process.argv[2] ?? process.env.RETNA_VERSION ?? '').trim();
 const version = given.startsWith('v') ? given.slice(1) : given;
 
 if (!SEMVER.test(version)) {
   console.error(`Not a version: ${given === '' ? '(nothing given)' : given}`);
-  console.error('Pass a tag (v1.2.3) or a plain version (1.2.3).');
+  console.error('Pass a tag (v1.2.3), a plain version (1.2.3), or set RETNA_VERSION in .env');
+  console.error('and run: node --env-file=.env npm/scripts/version.js');
   process.exit(1);
 }
 
