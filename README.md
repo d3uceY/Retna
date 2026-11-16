@@ -22,19 +22,19 @@ brew install --cask d3uceY/homebrew-retna/retna
 With npm, which downloads the binary for your machine on install:
 
 ```
-npm install -g @deuce/retna
+npm install -g retna
 ```
 
 Or run it without installing:
 
 ```
-npx @deuce/retna contrast "#777" "#fff"
+npx retna contrast "#777" "#fff"
 ```
 
 npm 11.4 and newer block dependency install scripts by default, so you may see
 `npm warn install-scripts`. Nothing is broken by that: `retna` downloads the
-binary on first run instead. Allow it with
-`--allow-scripts=@deuce/retna` to have the download happen at install time.
+binary on first run instead. Allow it with `--allow-scripts=retna` to have the
+download happen at install time.
 
 Prebuilt binaries for Linux, macOS and Windows are on the
 [releases page](https://github.com/d3uceY/Retna/releases). Unpack the archive
