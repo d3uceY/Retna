@@ -420,3 +420,5 @@ an 88 KB skill that still works, minus its links into the deep references.
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+<img src="assets/retna-rainbow.gif" alt="The Retna wordmark in the Game Boy Color rainbow palette" width="100%">
