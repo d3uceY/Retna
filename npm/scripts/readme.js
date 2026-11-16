@@ -2,11 +2,11 @@
 // Builds npm/README.md from the root README, and prints what it wrote.
 //
 // npm renders a package's README out of the published tarball, and the tarball
-// holds cli.js and the license and nothing else. Every relative path the root
-// README uses, for the logo and for the skill folder, would point at nothing
-// there. Rather than keep a second copy of the documentation that drifts, the
-// npm page is built from the one the repo already maintains, with each relative
-// target rewritten to an absolute GitHub URL.
+// holds the shim, the installer and the license and nothing else. Every relative
+// path the root README uses, for the logo and for the skill folder, would point
+// at nothing there. Rather than keep a second copy of the documentation that
+// drifts, the npm page is built from the one the repo already maintains, with
+// each relative target rewritten to an absolute GitHub URL.
 //
 // The output is generated, so it is not committed. See .gitignore.
 

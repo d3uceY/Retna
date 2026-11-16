@@ -12,7 +12,8 @@ on:
 # built-in token.
 permissions:
   contents: write
-
+  # npm --provenance signs an attestation through GitHub's OIDC provider.
+  id-token: write
 jobs:
   goreleaser:
     runs-on: ubuntu-latest
@@ -48,4 +49,31 @@ jobs:
           # which is a second repository. A PAT with write access to the tap.
           # See CONTRIBUTING.md, "Releasing".
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
+
+      # The npm package downloads the binary for the machine it installs on
+      # from the release above, so it must be published after GoReleaser has
+      # uploaded the archives. See CONTRIBUTING.md, "The npm package".
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: "https://registry.npmjs.org"
+
+      # The package page is rendered from a README in the tarball, where the
+      # root README's relative image and skill paths lead nowhere, so the npm
+      # copy is built with them made absolute.
+      - name: Build the npm README
+        run: node npm/scripts/readme.js
+
+      # The npm package version must match the release binary it downloads.
+      - name: Stamp npm package version from the tag
+        working-directory: npm
+        run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
+
+      # The release exists already, so the install-time download resolves.
+      - name: Publish to npm
+        working-directory: npm
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

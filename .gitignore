@@ -6,9 +6,9 @@
 # GoReleaser working directory
 /dist/
 
-# Binaries unpacked out of a GitHub release into the npm platform packages.
-# The release workflow puts them here before publishing; they are not source.
-/npm/**/bin/
+# The binary the npm install script downloads. It is unpacked out of a GitHub
+# release at install time, so it is never source.
+/npm/vendor/
 
 # Installed dependencies, if anyone runs npm install or npm link in the
 # package tree while working on it.

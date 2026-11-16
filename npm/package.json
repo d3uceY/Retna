@@ -1,5 +1,5 @@
 {
-  "name": "retna",
+  "name": "@deuce/retna",
   "version": "0.1.1",
   "description": "Convert colors between color spaces and measure their contrast",
   "keywords": [
@@ -12,32 +12,44 @@
     "a11y",
     "oklch",
     "color-spaces",
-    "cli"
+    "cli",
+    "go"
   ],
-  "homepage": "https://github.com/d3uceY/Retna",
-  "bugs": "https://github.com/d3uceY/Retna/issues",
+  "homepage": "https://github.com/d3uceY/Retna#readme",
+  "bugs": {
+    "url": "https://github.com/d3uceY/Retna/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/d3uceY/Retna.git",
     "directory": "npm"
   },
   "license": "MIT",
-  "author": "d3uceY",
+  "author": "d3uceY <onyekwelujesse1234@gmail.com>",
   "bin": {
-    "retna": "./cli.js"
+    "retna": "bin/retna.js"
   },
   "files": [
-    "cli.js"
+    "bin/",
+    "lib/",
+    "install.js"
   ],
+  "scripts": {
+    "postinstall": "node install.js"
+  },
   "engines": {
     "node": ">=18"
   },
-  "optionalDependencies": {
-    "retna-darwin-arm64": "0.1.1",
-    "retna-darwin-x64": "0.1.1",
-    "retna-linux-arm64": "0.1.1",
-    "retna-linux-x64": "0.1.1",
-    "retna-win32-arm64": "0.1.1",
-    "retna-win32-x64": "0.1.1"
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "publishConfig": {
+    "access": "public"
   }
 }

@@ -48,8 +48,8 @@ and tests the tree and then runs GoReleaser. GoReleaser builds amd64 and arm64
 binaries for Linux, macOS and Windows, packs each one with the license and
 readme, writes a checksum file and opens the GitHub release. The changelog comes
 from the commits since the previous tag, with `docs:`, `test:` and `chore:`
-commits filtered out. Once the release is up, two more jobs publish the npm
-packages described under "The npm packages" below.
+commits filtered out. Once the release is up, the same job publishes the npm
+package described under "The npm package" below.
 
 The version the binary reports is injected at build time, so `retna version`
 always matches the tag. The placeholder in `cmd/root.go` is only what an
@@ -92,22 +92,32 @@ run. If that happens, either reinstall with `brew install --cask
 Homebrew casks are a macOS feature. GoReleaser emits Linux stanzas as well, but
 treat them as unused: Linux users should use the tarball.
 
-### The npm packages
+### The npm package
 
-`npm/` holds what gets published to npm: the `retna` wrapper and six
-`retna-<platform>-<arch>` packages. Each platform package carries the bare
-binary for one os and cpu pair, so npm installs exactly one of them, picked by
-the machine, and `retna` is a launcher that execs it. There is no `postinstall`
-anywhere, which is what makes an install with `--ignore-scripts` work.
+`npm/` holds the one package published to npm, `@deuce/retna`. npm cannot
+publish a native executable, so the package ships a JS shim, `bin/retna.js`,
+which spawns a binary that `install.js` downloads from the GitHub release for
+the package version. It is the same arrangement as `@deuce/piper`: one package
+covers every platform, instead of seven packages that all have to be published
+and approved in lockstep.
 
-Nothing is downloaded on the user's machine and the release page is not used as
-a package registry. `npm-platform` in the workflow does the fetching, on the
-runner: it downloads the archive GoReleaser just uploaded, takes the binary out
-of it, drops it into the matching package and stages that. The wrapper goes last,
-from `npm-wrapper`, because its `optionalDependencies` pin the six versions and
-it can only go out once they exist.
+It is published under the `@deuce` scope rather than as a bare `retna`: the
+scope is owned outright, the same one `@deuce/piper` uses, so the name does not
+depend on an unscoped name staying free. The `bin` entry is still `retna`,
+whatever the package is called.
 
-The wrapper's README is generated rather than committed. npm renders a package
+The version is the tag, as everywhere else. The workflow stamps it into
+`npm/package.json` before publishing, so tag `v0.2.0` becomes npm `0.2.0`, and
+`install.js` asks for `releases/download/v0.2.0/...`. The two have to agree: a
+package whose version has no release installs and then fails to download, which
+is why GoReleaser runs first in the same job.
+
+`files` is an allowlist of `bin/`, `lib/` and `install.js`. The download lands
+in `vendor/`, which is ignored by git and by npm. `lib/platform.js` maps
+`process.platform` and `process.arch` onto the archive names GoReleaser writes,
+so it has to stay in step with `name_template` in `.goreleaser.yaml`.
+
+The package's README is generated rather than committed. npm renders a package
 page out of the published tarball, where the relative paths the root README uses
 for the logo and the skill folder lead nowhere, so `npm/scripts/readme.js`
 rewrites every relative target to an absolute GitHub URL and writes
@@ -115,87 +125,86 @@ rewrites every relative target to an absolute GitHub URL and writes
 copy of the documentation, and the package page is rebuilt from it on every
 release.
 
-The version is the tag, as everywhere else. `npm/scripts/version.js` takes the
-tag, strips the leading `v`, checks the rest is semver npm will accept, and
-writes the result into all seven `package.json` files and the wrapper's six
-pins. Those files sit at `0.0.0` in the repo and nothing bumps them by hand:
+### The postinstall is optional
+
+npm 11.4+ blocks dependency install scripts by default, so a fresh install can
+print:
 
 ```
-node npm/scripts/version.js v0.2.0
+npm warn install-scripts   @deuce/retna@0.1.1 (postinstall: node install.js)
 ```
 
-Publishing by hand is not the supported path, but if you have to, run
-`node npm/scripts/version.js` and `node npm/scripts/readme.js` first, then
-`npm stage publish` from each package directory, platforms before the wrapper,
-and approve each one. Publishing `0.0.0` straight out of a clean checkout, or a
-wrapper with no README, is the one way to get this wrong.
-
-### Releases are staged, not published
-
-A release puts the seven packages in npm's staging area, and someone approves
-them with 2FA before they become installable. So `NPM_AUTH_TOKEN` is a stage-only
-granular token with no 2FA bypass, and it does not need to be anything else.
-Staged publishing exists so that bypass tokens stop being necessary; npm's own
-guidance is to delete them and use either a trust relationship or a stage-only
-token, which is what this repo does.
-
-Four things follow from that:
-
-- Nothing is live until it is approved. All seven packages, every version.
-  `npm stage list` shows what is waiting.
-- `npm stage publish` needs npm 11.15.0 or newer. Node 24.12 ships 11.6.2, which
-  is the only reason both jobs install npm before doing anything.
-- Staged and published versions share one index, so a version cannot be staged
-  twice. Re-running after a successful release is safe, because the `npm view`
-  guard skips what is already published. Re-running while something is staged
-  and unapproved fails instead, and `npm stage reject <stage-id>` clears it.
-- Staging a package that does not exist creates it, as a public `0.0.0-stage`
-  placeholder. That is what lets the seven new names exist before anything else
-  can be configured for them.
-
-A token that cannot stage stops the run with `E403 ... bypass 2fa enabled is
-required`, and one that can publish but wants a one-time password stops it with
-`EOTP: This operation requires a one-time password from your authenticator`.
-Neither reads like a token type problem, and both are one.
-
-### Moving to trusted publishing
-
-Once the seven packages exist, a trust relationship lets CI authenticate with
-OIDC instead of a token, and provenance is generated automatically rather than
-from the `--provenance` flag. The packages have to exist first, which is why this
-comes after a staged release and not before.
-
-With npm 11.15.0 or newer locally, logged in as yourself:
+That is not a broken install. `install.js` treats every failure as a warning,
+and `bin/retna.js` retries the download on first run, so a blocked or failed
+script costs a slower first run rather than a missing command. Users who want
+the download at install time allow it in one of two ways:
 
 ```
-for p in retna retna-linux-x64 retna-linux-arm64 retna-darwin-x64 \
-         retna-darwin-arm64 retna-win32-x64 retna-win32-arm64; do
-  npm trust github "$p" --file release.yml --repo d3uceY/Retna \
-    --allow-stage-publish --yes
-  sleep 2
-done
+npm install -g --allow-scripts=@deuce/retna                 # this install only
+npm config set allow-scripts=@deuce/retna --location=user   # all future installs
 ```
 
-`--file` is the workflow filename on its own, not its path. `--allow-stage-publish`
-and not `--allow-publish`: staging is the whole point, and npm recommends giving
-a trust relationship the narrower of the two. The first call prompts for 2FA and
-offers to skip it for the next five minutes, which covers the other six.
-`npm trust` refuses a token with 2FA bypass enabled, so use a session login.
+Keep that property. If the shim ever requires `vendor/` to exist, every npm
+11.4+ user gets a broken CLI. `RETNA_SKIP_DOWNLOAD=1` skips the download
+entirely, for offline and air-gapped installs.
 
-The same thing can be done by hand on each package's Settings page under
-Trusted publishing. Prefer the loop: npm does not validate those fields when you
-save them and every one is case sensitive, so a typo shows up only as `ENEEDAUTH`
-at the next release. `npm trust` errors if a relationship already exists there;
-`npm trust list <package>` prints the id and `npm trust revoke --id <id>`
-removes it so you can create the replacement.
+### The npm token
 
-After a release has gone through OIDC, revoke the token and delete the secret.
-The CLI prefers OIDC when it is available and falls back to the token only when
-it is not, so nothing breaks in between.
+`NPM_TOKEN` is a repository secret holding a **granular access token** created
+at <https://www.npmjs.com/settings/deuce/tokens>:
 
-Provenance is on throughout, so both jobs ask for `id-token: write`. Under a
-trust relationship that permission is how npm authenticates at all; with the
-token it only feeds the attestation.
+| Field | Value |
+| --- | --- |
+| Packages and scopes | `@deuce/retna` |
+| Permissions | **Read and write** |
+| Bypass two-factor authentication | **enabled** |
+
+The 2FA bypass is not optional. Without it CI aborts with `EOTP: This operation
+requires a one-time password`, because a runner cannot answer a 2FA prompt. An
+**Automation** classic token also works (it is always 2FA-exempt) but grants
+publish rights on every package, so the granular token is the narrower choice.
+
+The workflow also asks for `permissions: id-token: write`, which
+`npm publish --provenance` uses to sign an attestation through GitHub's OIDC
+provider.
+
+Never commit the token, echo it, or paste it into a chat. Read it only through
+`${{ secrets.NPM_TOKEN }}` in the workflow. If it is ever exposed, revoke it on
+npmjs.com immediately and add a new secret.
+
+### npm error → cause → fix
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| `404 Not Found - PUT .../@deuce%2fretna` | Publishing to a scope you don't own, or wrong account | Log in as the scope owner |
+| `ENEEDAUTH` / `need auth` | `NPM_TOKEN` missing, empty, or expired | Create or refresh the secret |
+| `EOTP` / requires one-time password | Token cannot bypass 2FA | Recreate as granular **with** 2FA bypass |
+| `EUSAGE: Provenance generation ... requires "write" access to the "id-token" permission` | Missing permission | Add `id-token: write` to the workflow `permissions` |
+| `EPUBLISHCONFLICT` / `403 ... cannot publish over the previously published versions` | Version already exists | Bump the tag; never reuse a version |
+| Install fails to download, `HTTP 404` on the release URL | No GitHub release for the package version | Let GoReleaser run for that tag first |
+| Install prints `skipping binary download` | `RETNA_SKIP_DOWNLOAD=1` set | Unset it |
+
+### Publishing by hand
+
+CI is the normal path. To publish from a laptop, with the release already on
+GitHub:
+
+```
+cd npm
+npm login                                          # answer the 2FA prompt yourself
+node scripts/readme.js
+npm version X.Y.Z --no-git-tag-version
+npm publish --access public
+```
+
+`--provenance` will not produce an attestation outside GitHub Actions; that is
+expected and harmless. Prefer `npm login` to exporting a token into a shell
+history.
+
+You cannot unpublish a version after npm's restriction window, and even inside
+it, unpublishing breaks anyone who already installed. The supported move is to
+publish a new patch with the fix, and `npm dist-tag add @deuce/retna@X.Y.Z latest`
+if the bad release is currently the default.
 
 ## Project layout
 
@@ -223,12 +232,12 @@ output/
   output.go        palette, swatches, ANSI aware column and table rendering
   json.go          the JSON view models
 npm/
-  package.json     the retna wrapper: bin, optionalDependencies, files
-  cli.js           execs the binary from the matching platform package
+  package.json     the npm package: bin, files, postinstall
+  bin/retna.js     the retna command; spawns the downloaded binary
+  install.js       postinstall: downloads the release archive into vendor/
+  lib/platform.js  maps process.platform/arch onto the release asset names
   scripts/
-    version.js     writes the tag-derived version into every package file
     readme.js      builds the npm README from the root README
-  platforms/       one package per os and arch pair, each holding bin/retna
 ```
 
 ## Design notes
