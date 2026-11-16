@@ -1,52 +1,50 @@
 <img src="assets/retna.png" alt="Retna" width="260">
 
-Convert colors and measure how readable they are.
-
-Retna reads a color in almost any notation, normalizes it to sRGB, and then
-either prints it in another color space or measures it against another color.
-Contrast comes from WCAG 2.x by default, and APCA is available behind
-`--algorithm`.
-
-It writes nothing to disk and keeps no configuration file. Every command reads
-its arguments and prints to stdout. There is an [agent skill](skill/SKILL.md)
-that teaches a coding agent to drive it.
+Convert colors and measure contrast. Retna takes a color in almost any notation,
+prints it in another space, or measures it against another. WCAG 2.x by
+default, APCA behind `--algorithm`. It writes nothing to disk and keeps no
+config. An [agent skill](skill/SKILL.md) teaches a coding agent to drive it.
 
 ## Install
 
-On macOS, with Homebrew:
+macOS, from the [Homebrew tap](https://github.com/d3uceY/homebrew-retna):
 
 ```
 brew install --cask d3uceY/homebrew-retna/retna
 ```
 
-With npm, which downloads the binary for your machine on install:
+npm, which downloads the binary for your platform:
 
 ```
 npm install -g @deuce/retna
 ```
 
-Or run it without installing:
+npm 11.4 and newer block install scripts, so that download can be skipped. If
+`retna` fails or npm warns about install scripts, allow the package and install
+again:
+
+```
+npm install -g @deuce/retna --allow-scripts=@deuce/retna
+```
+
+The flag is for global installs and `npx`; npm rejects it in a project install.
+Either way, `retna` fetches the binary on first run.
+
+Without installing:
 
 ```
 npx @deuce/retna contrast "#777" "#fff"
 ```
 
-npm 11.4 and newer block dependency install scripts by default, so you may see
-`npm warn install-scripts`. Nothing is broken by that: `retna` downloads the
-binary on first run instead. Allow it with `--allow-scripts=@deuce/retna` to
-have the download happen at install time.
-
 Prebuilt binaries for Linux, macOS and Windows are on the
-[releases page](https://github.com/d3uceY/Retna/releases). Unpack the archive
-and put `retna` somewhere on your PATH.
-
-With Go 1.25 or newer:
+[releases page](https://github.com/d3uceY/Retna/releases); unpack one onto your
+PATH. With Go 1.25 or newer:
 
 ```
 go install github.com/d3uceY/Retna@latest
 ```
 
-Or build from a clone:
+From a clone:
 
 ```
 git clone https://github.com/d3uceY/Retna
@@ -74,8 +72,7 @@ AAA Normal  FAIL
 AAA Large   FAIL
 ```
 
-Give it a foreground and a background. Add `--against` to check one foreground
-against a list instead:
+`--against` measures one foreground against a list:
 
 ```
 retna contrast "#777" --against "#fff,#000,#f5f5f5,#101010"
@@ -94,13 +91,13 @@ Color       Ratio   AA    AAA
    #101010  4.25:1  FAIL  FAIL
 ```
 
-`--against` can be repeated, and each value may hold a comma separated list:
+`--against` repeats, and each value may be a comma list:
 
 ```
 retna contrast "#777" --against "#fff" --against "#000,#101010"
 ```
 
-Add `--all` to run every algorithm and print each one in turn:
+`--all` runs every algorithm:
 
 ```
 retna contrast red white --all
@@ -108,8 +105,7 @@ retna contrast red white --all
 
 ### Using it in CI
 
-`--min` takes a ratio. If any pair falls short, Retna prints the verdict and
-exits 1.
+`--min` takes a ratio and exits 1 when a pair falls short.
 
 ```
 retna contrast "$FG" "$BG" --min 4.5
@@ -126,13 +122,9 @@ Required: 4.50:1
   run: retna contrast "${{ vars.FG }}" "${{ vars.BG }}" --min 4.5
 ```
 
-With `--against`, the summary line reports how many pairs failed. The exit code
-is 1 when at least one did.
-
-`--min` compares the WCAG ratio, so it needs the wcag algorithm to be selected.
-Combining it with `--algorithm apca` is an error rather than a check that quietly
-finds nothing to measure. `--all` includes wcag, so it works there. The value
-has to be a real number above zero, since `--min 0` would pass anything.
+With `--against`, the summary counts the pairs that failed. `--min` compares
+WCAG, so it needs the wcag algorithm: `--all` includes it, and `--min` with
+`--algorithm apca` is an error. The value must be a number above zero.
 
 ## convert
 
@@ -184,9 +176,7 @@ Luminance  0.2830
 
 ## palette contrast
 
-This does the same measurements as `contrast --against`, but the colors come
-from a file or from stdin. It saves typing when the list already exists
-somewhere else.
+Same measurements as `contrast --against`, with colors from a file or stdin:
 
 ```
 retna palette contrast --foreground white --file palette.txt
@@ -194,10 +184,8 @@ retna palette contrast --foreground white --file - < palette.txt
 retna palette contrast --foreground white --colors "#000,#111,#666"
 ```
 
-The file holds one color per line, and each line may also be a comma separated
-list. Blank lines and lines starting with `//` are skipped, and a UTF-8 byte
-order mark at the start of the file is ignored, so a file saved by a Windows
-editor works as-is.
+One color per line, comma lists allowed. Blank lines and `//` are skipped; a
+UTF-8 BOM is ignored.
 
 ```
 Contrast
@@ -213,8 +201,7 @@ Color       Ratio    AA    AAA
 
 ## readable
 
-`readable` answers the other direction. Given a background, which text color
-reads best on it?
+Which text color reads best on a background.
 
 ```
 retna readable "#3498db"
@@ -229,15 +216,13 @@ Text color  Ratio   AA
    #FFFFFF  3.15:1  FAIL
 ```
 
-Candidates default to black and white. Use `--candidates` to try your own,
-`--level AAA` to raise the bar, or `--best` to print only the winner.
-`text-color` works as an alias for the command.
+Candidates default to black and white: `--candidates` for your own,
+`--level AAA` to raise the bar, `--best` for the winner alone. Alias:
+`text-color`.
 
 ## fix
 
-`fix` nudges a color until it passes. It walks OKLab lightness in the direction
-that increases contrast and leaves chroma and hue alone, so the result still
-looks like the color you started with.
+`fix` walks OKLab lightness toward more contrast, leaving chroma and hue alone.
 
 ```
 retna fix "#777777" --background "#ffffff" --level AA
@@ -258,26 +243,21 @@ Color       Ratio   WCAG  Note
    #747474  4.65:1  PASS
 ```
 
-Use `--target 7` for an explicit ratio, or `--suggest` to control how many
-alternatives are listed. A color that already passes is reported and left
-alone.
-
-The target has to sit between 1:1 and 21:1. Black on white is the highest ratio
-there is, so anything above 21 cannot be reached and is rejected instead of
-reported as unfixable. `--suggest` needs at least 1.
-
-The suggested colors are measured after rounding to 8-bit channels, so the hex
-shown is the color that actually meets the ratio on that line.
+`--target` sets the ratio, `--suggest` the number of alternatives. A color that
+already passes is reported and left alone. The target must sit in 1:1–21:1,
+since black on white is the highest there is, and `--suggest` needs at least 1.
+Suggestions are measured after 8-bit rounding, so the hex shown is the one that
+meets the ratio.
 
 ## Input formats
 
-Hex works with or without the hash, in three, four, six or eight digit form:
+Hex, hash optional, in 3, 4, 6 or 8 digits:
 
 ```
 #fff   #ffff   #ffffff   #ffffff80
 ```
 
-Functional notation accepts commas, spaces, or a slash before the alpha value:
+Functional notation takes commas, spaces, or a slash before alpha:
 
 ```
 rgb(26, 115, 232)      rgb(26 115 232)      rgb(26 115 232 / 0.5)
@@ -287,13 +267,10 @@ lab(48.77 9.69 -67.47)                      lch(48.77 68.16 278.18)
 oklab(0.5737 -0.0409 -0.1902)               oklch(0.5737 0.1946 257.86)
 ```
 
-Angles accept `deg`, `rad`, `grad` or `turn`, and percentages work anywhere CSS
-allows them. The CSS color names are matched case insensitively, so
-`rebeccapurple`, `RebeccaPurple` and `#663399` all name the same color.
-`transparent` is accepted too.
-
-The wide gamut spaces arrive through CSS `color()`, which names its space
-first:
+Angles take `deg`, `rad`, `grad` or `turn`; percentages work wherever CSS allows
+them. Names are case insensitive, so `rebeccapurple`, `RebeccaPurple` and
+`#663399` are one color. `transparent` works. Wide gamut spaces come through
+`color()`:
 
 ```
 color(srgb 0.2039 0.5961 0.8588)     color(display-p3 0.3208 0.588 0.8369)
@@ -301,11 +278,9 @@ color(a98-rgb 0.3725 0.5905 0.8459)  color(prophoto-rgb 0.4327 0.51 0.7876)
 color(rec2020 0.3766 0.5394 0.8141)  color(display-p3 1 0 0 / 0.5)
 ```
 
-Components take numbers or percentages and are allowed to fall outside 0..1,
-which is how CSS names colors the sRGB gamut cannot hold. Retna keeps those
-values rather than treating them as mistakes, because a negative component
-still names a real color. Clipping only happens when the color has to be drawn
-as sRGB.
+Components take numbers or percentages and may fall outside 0..1, which is how
+CSS names colors sRGB cannot hold. Retna keeps them, and clips only when the
+color is drawn as sRGB.
 
 ## Color spaces
 
@@ -314,17 +289,13 @@ hex, rgb, rgba, hsl, hsv, hwb, lab, lch, oklab, oklch,
 srgb, display-p3, a98-rgb, prophoto-rgb, rec2020
 ```
 
-Lab, LCH and ProPhoto use the D50 white point, which is what CSS specifies.
-OKLab, OKLCH, display-p3, a98-rgb and rec2020 use D65.
-
-Turning an sRGB color into one of the wider spaces cannot land outside their
-gamuts, so those components are reported without clipping. A clipped component
-would name a different color. Going the other way, a `color()` value outside
-the sRGB gamut is clipped to the nearest displayable color.
+Lab, LCH and ProPhoto use D50, as CSS specifies; OKLab, OKLCH, display-p3,
+a98-rgb and rec2020 use D65. sRGB to a wider space is never clipped; a `color()`
+value outside the sRGB gamut is clipped to the nearest displayable color.
 
 ## JSON output
 
-`--json` works on every command. For contrast:
+`--json` works on every command:
 
 ```
 retna contrast "#777" "#fff" --json
@@ -342,10 +313,8 @@ retna contrast "#777" "#fff" --json
 }
 ```
 
-With `--against`, the measurements become a list under `results`. Selecting
-`--algorithm apca` adds an `apca` field holding Lc.
-
-`inspect --json` returns each space as a three number group plus `luminance`:
+With `--against` the pairs go under `results`; `--algorithm apca` adds `apca`
+holding Lc. `inspect --json` gives each space as three numbers plus `luminance`:
 
 ```json
 {
@@ -369,53 +338,36 @@ With `--against`, the measurements become a list under `results`. Selecting
 }
 ```
 
-Each group is one line here for readability; the command itself indents every
-number onto its own line.
-
-Hues are degrees, saturation style channels run from 0 to 1, Lab lightness runs
-from 0 to 100, and OKLab lightness runs from 0 to 1. The wide gamut components
-are raw, so they can sit outside 0..1.
+One line per group here; the command indents each number. Hues are degrees,
+saturation channels 0..1, Lab lightness 0..100, OKLab 0..1. Wide gamut
+components are raw and may sit outside 0..1.
 
 ## Transparency
 
-WCAG and APCA both measure opaque colors. When either input has alpha, Retna
-composites the background over white and then the foreground over that
-background, which is what a browser would paint, and prints a note so the
-substitution is not silent.
+Both algorithms measure opaque colors. With alpha, Retna composites the
+background over white, then the foreground over that, as a browser would paint,
+and says so.
 
 ## APCA
 
-`--algorithm apca` returns Lc. The sign carries meaning: dark text on a light
-background is positive, and light text on a dark background is negative, so
-compare absolute values. The built in checks use the 45, 60 and 75 bands.
+`--algorithm apca` returns Lc: positive for dark text on light, negative for
+light on dark, so compare absolute values. Checks use the 45, 60 and 75 bands.
 
 ## Using it from an AI agent
 
-[`skill/SKILL.md`](skill/SKILL.md) is an agent skill for building and auditing UI
-color systems with Retna as the measuring instrument: pick a ramp, then check
-every text and surface pair instead of estimating a ratio. It carries reference
-docs on the CLI, palette recipes, dark mode, accessibility thresholds and color
-science.
-
-Copy the folder into your agent's skills directory:
+[`skill/SKILL.md`](skill/SKILL.md) builds and audits UI color systems with
+Retna as the measuring instrument: pick a ramp, check every text and surface
+pair. References cover the CLI, palette recipes, dark mode, thresholds and color
+science. Copy it into your agent's skills directory:
 
 ```
 cp -r skill ~/.copilot/skills/retna-color-expert     # VS Code / Copilot
 cp -r skill ~/.claude/skills/retna-color-expert      # Claude Code
 ```
 
-It is plain markdown and nothing is fetched at runtime, so a clone already has
-everything: read [`skill/SKILL.md`](skill/SKILL.md) from the checkout, or start
-with [`skill/references/retna-cli.md`](skill/references/retna-cli.md) for the
-command reference. Installing with `go install`, Homebrew or a release archive
-gives you the binary and nothing else, so clone the repo to get `skill/`.
-
-`skill/references/color-expert/` is 2.4 MB of the folder's 2.5 MB. It is a copy
-of [meodai/skill.color-expert](https://github.com/meodai/skill.color-expert) and
-keeps its own license, CC BY 4.0 with third-party material credited per file,
-while the rest of the skill is MIT, like Retna. Details in
-[`skill/ATTRIBUTION.md`](skill/ATTRIBUTION.md). Dropping that one subfolder leaves
-an 88 KB skill that still works, minus its links into the deep references.
+Plain markdown, nothing fetched at runtime. Command reference:
+[`skill/references/retna-cli.md`](skill/references/retna-cli.md). Homebrew, npm,
+`go install` and release archives ship the binary only, so clone for `skill/`.
 
 ## License
 
