@@ -1,5 +1,5 @@
 {
-  "name": "retna",
+  "name": "@deuce/retna",
   "version": "0.1.1",
   "description": "Convert colors between color spaces and measure their contrast",
   "keywords": [

@@ -94,19 +94,26 @@ treat them as unused: Linux users should use the tarball.
 
 ### The npm package
 
-`npm/` holds the one package published to npm, `retna`. npm cannot publish a
-native executable, so the package ships a JS shim, `bin/retna.js`, which spawns
-a binary that `install.js` downloads from the GitHub release for the package
-version. It is the same arrangement as `@deuce/piper`: one package covers every
-platform, instead of seven packages that all have to be published and approved
-in lockstep.
+`npm/` holds the one package published to npm, `@deuce/retna`. npm cannot
+publish a native executable, so the package ships a JS shim, `bin/retna.js`,
+which spawns a binary that `install.js` downloads from the GitHub release for
+the package version. It is the same arrangement as `@deuce/piper`: one package
+covers every platform, instead of seven packages that all have to be published
+and approved in lockstep.
 
-The name is unscoped because it is free and the shorter install is worth it. If
-npm ever refuses it as too similar to an existing package — the error is
-`403 ... name too similar to existing package ...` — rename it to
-`@deuce/retna`, the scope `@deuce/piper` already uses. The `name` field in
-`npm/package.json` is the only place the name is written; the token's package
-scope, the README and this file are the only places it is documented.
+The name is scoped because npm will not create the bare one. Publishing `retna`
+answers
+
+```
+403 Forbidden - PUT https://registry.npmjs.org/retna - Package name too similar
+to existing packages ret,retry,lerna,eta; try renaming your package to
+'@deuce/retna' and publishing with 'npm publish --access=public' instead
+```
+
+so the scope is not a preference, it is the only name npm accepts. The `bin`
+entry stays `retna`, so the command itself is unaffected. Nothing else reads the
+package name: `install.js` builds its URL from `d3uceY/Retna` and the package
+version, and `bin/retna.js` resolves the binary next to itself.
 
 The version is the tag, as everywhere else. The workflow stamps it into
 `npm/package.json` before publishing, so tag `v0.2.0` becomes npm `0.2.0`, and
@@ -133,7 +140,7 @@ npm 11.4+ blocks dependency install scripts by default, so a fresh install can
 print:
 
 ```
-npm warn install-scripts   retna@0.1.1 (postinstall: node install.js)
+npm warn install-scripts   @deuce/retna@0.1.2 (postinstall: node install.js)
 ```
 
 That is not a broken install. `install.js` treats every failure as a warning,
@@ -142,8 +149,8 @@ script costs a slower first run rather than a missing command. Users who want
 the download at install time allow it in one of two ways:
 
 ```
-npm install -g --allow-scripts=retna                 # this install only
-npm config set allow-scripts=retna --location=user   # all future installs
+npm install -g --allow-scripts=@deuce/retna                 # this install only
+npm config set allow-scripts=@deuce/retna --location=user   # all future installs
 ```
 
 Keep that property. If the shim ever requires `vendor/` to exist, every npm
@@ -157,7 +164,7 @@ at <https://www.npmjs.com/settings/deuce/tokens>:
 
 | Field | Value |
 | --- | --- |
-| Packages and scopes | `retna` |
+| Packages and scopes | `@deuce/retna` |
 | Permissions | **Read and write** |
 | Bypass two-factor authentication | **enabled** |
 
@@ -178,8 +185,8 @@ npmjs.com immediately and add a new secret.
 
 | Error | Cause | Fix |
 | --- | --- | --- |
-| `404 Not Found - PUT .../retna` | Publishing to a package the account cannot write, or wrong account | Log in as the package owner |
-| `403 ... name too similar to existing package` | npm considers `retna` too close to an existing name | Rename the package to `@deuce/retna`; see "The npm package" |
+| `404 Not Found - PUT .../@deuce%2fretna` | Publishing to a scope you don't own, or wrong account | Log in as the scope owner |
+| `403 ... Package name too similar to existing packages ret,retry,lerna,eta` | `name` in `npm/package.json` is the bare `retna`, which npm will not create | Set the name to `@deuce/retna` |
 | `ENEEDAUTH` / `need auth` | `NPM_TOKEN` missing, empty, or expired | Create or refresh the secret |
 | `EOTP` / requires one-time password | Token cannot bypass 2FA | Recreate as granular **with** 2FA bypass |
 | `EUSAGE: Provenance generation ... requires "write" access to the "id-token" permission` | Missing permission | Add `id-token: write` to the workflow `permissions` |
@@ -206,7 +213,7 @@ history.
 
 You cannot unpublish a version after npm's restriction window, and even inside
 it, unpublishing breaks anyone who already installed. The supported move is to
-publish a new patch with the fix, and `npm dist-tag add retna@X.Y.Z latest`
+publish a new patch with the fix, and `npm dist-tag add @deuce/retna@X.Y.Z latest`
 if the bad release is currently the default.
 
 ## Project layout
